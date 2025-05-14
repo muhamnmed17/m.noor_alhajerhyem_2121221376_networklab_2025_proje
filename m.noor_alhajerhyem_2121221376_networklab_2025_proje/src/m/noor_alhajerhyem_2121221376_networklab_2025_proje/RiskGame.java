@@ -14,7 +14,6 @@ public class RiskGame {
     private Map<String, List<String>> continentTerritories = new HashMap<>();  // Kıta-bölgeler ilişkisi
     private Map<String, Integer> continentBonus = new HashMap<>();  // Kıta bonusları
 
-    private int currentPlayer = -1;
     private Map<Integer, Integer> playerTroopsToPlace = new HashMap<>();
     private static final int INITIAL_TROOPS = 20;  // Her oyuncunun başlangıçta alacağı asker sayısı
     private static final int MIN_TROOPS_PER_TURN = 3;  // Bir turda minimum alınacak asker sayısı
@@ -23,23 +22,16 @@ public class RiskGame {
     /**
      * Oyunu başlatır ve başlangıç durumunu ayarlar
      */
-    public void initializeGame() {
-        // Bölgeleri oluştur
-        createTerritories();
+public void initializeGame(int playerId1, int playerId2) {
+    createTerritories();
+    defineAdjacencies();
+    defineContinents();
+    distributeTerritories(playerId1, playerId2);
 
-        // Komşuluk ilişkilerini tanımla
-        defineAdjacencies();
+    playerTroopsToPlace.put(playerId1, INITIAL_TROOPS);
+    playerTroopsToPlace.put(playerId2, INITIAL_TROOPS);
+}
 
-        // Kıta-bölge ilişkilerini ve bonusları tanımla
-        defineContinents();
-
-        // Bölgeleri rastgele dağıt
-        distributeTerritories();
-
-        // Başlangıç askerlerini ver
-        playerTroopsToPlace.put(0, INITIAL_TROOPS);
-        playerTroopsToPlace.put(1, INITIAL_TROOPS);
-    }
 
     /**
      * Bölgeleri oluşturur
@@ -117,35 +109,22 @@ public class RiskGame {
     /**
      * Bölgeleri rastgele dağıtır
      */
-    private void distributeTerritories() {
-        List<String> territoryNames = new ArrayList<>(territories.keySet());
-        Collections.shuffle(territoryNames);
+  private void distributeTerritories(int player1Id, int player2Id) {
+    List<String> territoryNames = new ArrayList<>(territories.keySet());
+    Collections.shuffle(territoryNames);
 
-        for (int i = 0; i < territoryNames.size(); i++) {
-            String territory = territoryNames.get(i);
-            int owner = i % 2;  // 0 veya 1 (iki oyuncu)
-            territories.get(territory).setOwner(owner);
-            territories.get(territory).setTroops(1);  // Her bölgeye başlangıçta 1 asker
-        }
+    for (int i = 0; i < territoryNames.size(); i++) {
+        String territory = territoryNames.get(i);
+        int owner = (i % 2 == 0) ? player1Id : player2Id;
+        territories.get(territory).setOwner(owner);
+        territories.get(territory).setTroops(1);
     }
+}
+
 
     /**
      * Sırayı bir sonraki oyuncuya geçirir ve asker dağıtımını hesaplar
      */
-    public void nextTurn() {
-        currentPlayer = (currentPlayer + 1) % 2;  // 0 -> 1 veya 1 -> 0
-
-        // Oyuncunun bir sonraki turda alacağı asker sayısını hesapla
-        int territoryCount = countPlayerTerritories(currentPlayer);
-        int continentBonus = calculateContinentBonus(currentPlayer);
-
-        // Asker sayısı = (Bölge sayısı / 3) + Kıta bonusu
-        int troops = Math.max(MIN_TROOPS_PER_TURN, territoryCount / 3) + continentBonus;
-        playerTroopsToPlace.put(currentPlayer, troops);
-
-        System.out.println("Sıra Oyuncu " + currentPlayer + "'e geçti. Alacağı asker: " + troops);
-    }
-
     /**
      * Bir oyuncunun sahip olduğu bölge sayısını döndürür
      */
@@ -188,9 +167,6 @@ public class RiskGame {
      * @return İşlem başarılı ise true, değilse false
      */
     public boolean placeTroops(int playerId, String territoryName, int troopCount) {
-        if (playerId != currentPlayer) {
-            return false;
-        }
 
         Territory territory = territories.get(territoryName);
         if (territory == null || territory.getOwner() != playerId) {
@@ -217,100 +193,91 @@ public class RiskGame {
      * @return [saldıran kayıp, savunan kayıp] dizisi veya null (başarısız
      * saldırı)
      */
-public int[] attack(int playerId, String fromTerritory, String toTerritory, int attackDice, StringBuilder errorMessage) {
-    if (playerId != currentPlayer) {
-        errorMessage.append("Şu an sizin sıranız değil.");
-        return null;
-    }
+    public int[] attack(int playerId, String fromTerritory, String toTerritory, int attackDice, StringBuilder errorMessage) {
 
-    Territory from = territories.get(fromTerritory);
-    Territory to = territories.get(toTerritory);
+        Territory from = territories.get(fromTerritory);
+        Territory to = territories.get(toTerritory);
 
-    if (from == null || to == null) {
-        errorMessage.append("Bölge bulunamadı.");
-        return null;
-    }
-
-    if (from.getOwner() != playerId) {
-        errorMessage.append("Kaynak bölge size ait değil.");
-        return null;
-    }
-
-    if (to.getOwner() == playerId) {
-        errorMessage.append("Kendi bölgenize saldırı yapamazsınız.");
-        return null;
-    }
-
-    if (!areNeighbors(fromTerritory, toTerritory)) {
-        errorMessage.append("Bu bölgeler komşu değil.");
-        return null;
-    }
-
-    if (from.getTroops() <= 1) {
-        errorMessage.append("Saldırı yapmak için en az 2 askere ihtiyacınız var.");
-        return null;
-    }
-
-    if (attackDice < 1 || attackDice > 3) {
-        errorMessage.append("Zar sayısı 1 ile 3 arasında olmalı.");
-        return null;
-    }
-
-    if (attackDice >= from.getTroops()) {
-        errorMessage.append("Bu kadar zar atamazsınız. En fazla " + (from.getTroops() - 1) + " zar atabilirsiniz.");
-        return null;
-    }
-
-    // Saldıran zarları
-    List<Integer> attackerDice = rollDice(attackDice);
-
-    // Savunan zarları (en fazla 2 zar)
-    int defendDice = Math.min(2, to.getTroops());
-    List<Integer> defenderDice = rollDice(defendDice);
-
-    // Zarları büyükten küçüğe sırala
-    Collections.sort(attackerDice, Collections.reverseOrder());
-    Collections.sort(defenderDice, Collections.reverseOrder());
-
-    System.out.println("Saldıran zarlar: " + attackerDice);
-    System.out.println("Savunan zarlar: " + defenderDice);
-
-    int comparisons = Math.min(attackerDice.size(), defenderDice.size());
-    int attackerLosses = 0;
-    int defenderLosses = 0;
-
-    for (int i = 0; i < comparisons; i++) {
-        if (attackerDice.get(i) > defenderDice.get(i)) {
-            defenderLosses++;
-        } else {
-            attackerLosses++;
+        if (from == null || to == null) {
+            errorMessage.append("Bölge bulunamadı.");
+            return null;
         }
+
+        if (from.getOwner() != playerId) {
+            errorMessage.append("Kaynak bölge size ait değil.");
+            return null;
+        }
+
+        if (to.getOwner() == playerId) {
+            errorMessage.append("Kendi bölgenize saldırı yapamazsınız.");
+            return null;
+        }
+
+        if (!areNeighbors(fromTerritory, toTerritory)) {
+            errorMessage.append("Bu bölgeler komşu değil.");
+            return null;
+        }
+
+        if (from.getTroops() <= 1) {
+            errorMessage.append("Saldırı yapmak için en az 2 askere ihtiyacınız var.");
+            return null;
+        }
+
+        if (attackDice < 1 || attackDice > 3) {
+            errorMessage.append("Zar sayısı 1 ile 3 arasında olmalı.");
+            return null;
+        }
+
+        if (attackDice >= from.getTroops()) {
+            errorMessage.append("Bu kadar zar atamazsınız. En fazla " + (from.getTroops() - 1) + " zar atabilirsiniz.");
+            return null;
+        }
+
+        // Saldıran zarları
+        List<Integer> attackerDice = rollDice(attackDice);
+
+        // Savunan zarları (en fazla 2 zar)
+        int defendDice = Math.min(2, to.getTroops());
+        List<Integer> defenderDice = rollDice(defendDice);
+
+        // Zarları büyükten küçüğe sırala
+        Collections.sort(attackerDice, Collections.reverseOrder());
+        Collections.sort(defenderDice, Collections.reverseOrder());
+
+        System.out.println("Saldıran zarlar: " + attackerDice);
+        System.out.println("Savunan zarlar: " + defenderDice);
+
+        int comparisons = Math.min(attackerDice.size(), defenderDice.size());
+        int attackerLosses = 0;
+        int defenderLosses = 0;
+
+        for (int i = 0; i < comparisons; i++) {
+            if (attackerDice.get(i) > defenderDice.get(i)) {
+                defenderLosses++;
+            } else {
+                attackerLosses++;
+            }
+        }
+
+        from.removeTroops(attackerLosses);
+        to.removeTroops(defenderLosses);
+
+        System.out.println("Saldıran kayıp: " + attackerLosses + ", Savunan kayıp: " + defenderLosses);
+
+        if (to.getTroops() <= 0) {
+            to.setOwner(playerId);
+            to.setTroops(1);
+            from.removeTroops(1);
+            System.out.println(toTerritory + " ele geçirildi!");
+        }
+
+        return new int[]{attackerLosses, defenderLosses};
     }
-
-    from.removeTroops(attackerLosses);
-    to.removeTroops(defenderLosses);
-
-    System.out.println("Saldıran kayıp: " + attackerLosses + ", Savunan kayıp: " + defenderLosses);
-
-    if (to.getTroops() <= 0) {
-        to.setOwner(playerId);
-        to.setTroops(1);
-        from.removeTroops(1);
-        System.out.println(toTerritory + " ele geçirildi!");
-    }
-
-    return new int[]{attackerLosses, defenderLosses};
-}
-
-
 
     /**
      * Güçlendirme işlemini gerçekleştirir
      */
     public boolean fortify(int playerId, String fromTerritory, String toTerritory, int troops) {
-        if (playerId != currentPlayer) {
-            return false;
-        }
 
         Territory from = territories.get(fromTerritory);
         Territory to = territories.get(toTerritory);
@@ -361,10 +328,6 @@ public int[] attack(int playerId, String fromTerritory, String toTerritory, int 
                 .collect(Collectors.joining(";"));
     }
 
-    public int getCurrentPlayer() {
-        return currentPlayer;
-    }
-
     public int getTroopsToPlace(int playerId) {
         return playerTroopsToPlace.getOrDefault(playerId, 0);
     }
@@ -372,6 +335,13 @@ public int[] attack(int playerId, String fromTerritory, String toTerritory, int 
     public int getTerritoryTroops(String territoryName) {
         Territory t = territories.get(territoryName);
         return (t != null) ? t.getTroops() : 0;
+    }
+
+    public void calculateTroopsFor(int playerId) {
+        int territoryCount = countPlayerTerritories(playerId);
+        int continentBonus = calculateContinentBonus(playerId);
+        int troops = Math.max(MIN_TROOPS_PER_TURN, territoryCount / 3) + continentBonus;
+        playerTroopsToPlace.put(playerId, troops);
     }
 
     /**

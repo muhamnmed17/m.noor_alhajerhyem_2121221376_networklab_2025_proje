@@ -9,6 +9,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.List;
 import javax.swing.border.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Risk oyunu için geliştirilmiş istemci uygulaması
@@ -16,15 +18,27 @@ import javax.swing.border.*;
 public class RiskClient extends JFrame {
 
     private JLabel troopsLeftLabel;
+    private JLabel playerColorLabel;
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Map<String, Set<String>> adjacencyMap = new HashMap<>();
+    private Timer turnTimer;
+    private int secondsLeft;
+    private JLabel timerLabel;
 
     private int playerId = -1;
+
+    private final Map<Integer, String> playerNames = new HashMap<>();
+
     private int currentTurn = -1;
-    private Map<Integer, Color> playerColors = Map.of(0, new Color(220, 20, 60), 1, new Color(30, 144, 255));
+
+    private Color getPlayerColor(int id) {
+        return (id % 2 == 0)
+                ? new Color(220, 20, 60) // Kırmızı
+                : new Color(30, 144, 255); // Mavi
+    }
     private static final Color SELECTED_COLOR = new Color(255, 215, 0, 200);
     private static final Color TARGET_COLOR = new Color(50, 205, 50, 200);
 
@@ -50,17 +64,21 @@ public class RiskClient extends JFrame {
     private JPanel attackerDicePanel;
     private JPanel defenderDicePanel;
 
-    public RiskClient(String serverIp, int serverPort) {
+    public RiskClient(String serverIp, int serverPort, String playerName) {
         super("Risk Oyunu");
         initializeTerritoryPositions();
         initializeContinentColors();
         initializeUI();
+        enableButtons(false); // Başlangıçta butonlar pasif olsun
 
         try {
             socket = new Socket(serverIp, serverPort);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             logToGameConsole("Sunucuya bağlandı: " + serverIp + ":" + serverPort);
+
+            // İsim gönder
+            sendCommand("SET_NAME " + playerName);
         } catch (IOException e) {
             logToGameConsole("Bağlantı hatası: " + e.getMessage());
             JOptionPane.showMessageDialog(this, "Sunucuya bağlanılamadı: " + e.getMessage(),
@@ -96,10 +114,17 @@ public class RiskClient extends JFrame {
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         troopsLeftLabel = new JLabel("Kalan Asker: 0", SwingConstants.CENTER);
         troopsLeftLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        playerColorLabel = new JLabel("Renginiz: -", SwingConstants.CENTER);
+        playerColorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        timerLabel = new JLabel("Süre: --", SwingConstants.CENTER);
+        timerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(timerLabel);
 
         infoPanel.add(statusLabel);
         infoPanel.add(Box.createVerticalStrut(5));
         infoPanel.add(troopsLeftLabel);
+        infoPanel.add(playerColorLabel);
 
         // Buton paneli
         JPanel buttonPanel = new JPanel();
@@ -130,6 +155,37 @@ public class RiskClient extends JFrame {
         return rightPanel;
     }
 
+    private void startTurnTimer() {
+        stopTurnTimer();
+        secondsLeft = 60;
+        timerLabel.setText("Süre: 60 sn");
+
+        turnTimer = new Timer();
+        turnTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> {
+                    secondsLeft--;
+                    timerLabel.setText("Süre: " + secondsLeft + " sn");
+
+                    if (secondsLeft <= 0) {
+                        stopTurnTimer();
+                        logToGameConsole("Süre doldu! Otomatik sıra geçiliyor.");
+                        endTurn(); // otomatik sırayı bitir
+                    }
+                });
+            }
+        }, 1000, 1000); // her saniye
+    }
+
+    private void stopTurnTimer() {
+        if (turnTimer != null) {
+            turnTimer.cancel();
+            turnTimer = null;
+        }
+        timerLabel.setText("Süre: --");
+    }
+
     /**
      * Güçlendirme modunu açar/kapatır
      */
@@ -154,6 +210,7 @@ public class RiskClient extends JFrame {
      * Oyuncunun sırasını bitirir
      */
     private void endTurn() {
+        sendCommand("END_TURN");
         sendCommand("END_TURN");
         logToGameConsole("Turu bitirdiniz.");
         statusLabel.setText("Turu bitirdiniz. Rakip bekleniyor...");
@@ -534,7 +591,7 @@ public class RiskClient extends JFrame {
         boolean isSelected = name.equals(selectedTerritory);
         boolean isTarget = name.equals(targetTerritory);
 
-        Color background = playerColors.getOrDefault(t.getOwner(), Color.LIGHT_GRAY);
+        Color background = getPlayerColor(t.getOwner());
         g2d.setColor(background);
         g2d.fillOval(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
 
@@ -692,10 +749,9 @@ public class RiskClient extends JFrame {
         }
     }
 
-   private boolean areNeighbors(String a, String b) {
-    return adjacencyMap.getOrDefault(a, Collections.emptySet()).contains(b);
-}
-
+    private boolean areNeighbors(String a, String b) {
+        return adjacencyMap.getOrDefault(a, Collections.emptySet()).contains(b);
+    }
 
     private boolean areConnected(String a, String b) {
         // Şimdilik sadece doğrudan komşuluk
@@ -768,20 +824,68 @@ public class RiskClient extends JFrame {
                 handleGameOverCommand(data);
             case "ADJACENCY" ->
                 handleAdjacencyMessage(data);
+
             default -> {
                 if (command.equals("ERROR")) {
                     logToGameConsole("Hata: " + data);
+                } else if (command.equals("INFO")) {
+                    logToGameConsole(data);
+
+                    if (data.contains("Diğer oyuncudan yeniden başlatma isteği")) {
+                        int answer = JOptionPane.showConfirmDialog(this,
+                                "Rakip oyunu yeniden başlatmak istiyor. Kabul ediyor musunuz?",
+                                "Yeniden Başlatma İsteği", JOptionPane.YES_NO_OPTION);
+
+                        if (answer == JOptionPane.YES_OPTION) {
+                            sendCommand("RESTART");
+                        } else {
+                            sendCommand("RESTART_DECLINE");
+                            logToGameConsole("Yeniden başlatma isteğini reddettiniz.");
+                        }
+                    }
+
+                } else if (command.equals("EXIT")) {
+                    JOptionPane.showMessageDialog(this,
+                            "Oyun kapatılıyor. Görüşmek üzere!",
+                            "Çıkış", JOptionPane.INFORMATION_MESSAGE);
+                    cleanup();
+                    System.exit(0);
+                } else if (command.equals("DISCONNECT")) {
+                    JOptionPane.showMessageDialog(this,
+                            data,
+                            "Bağlantı Kesildi", JOptionPane.WARNING_MESSAGE);
+                    cleanup();
+                    System.exit(0);
                 } else {
                     logToGameConsole("Bilinmeyen komut: " + command);
                 }
             }
-
         }
     }
 
     private void handleInitCommand(String data) {
-        playerId = Integer.parseInt(data);
-        logToGameConsole("Oyuncu kimliğiniz: " + playerId);
+        String[] parts = data.split(":", 2);
+        playerId = Integer.parseInt(parts[0]);
+        String name = (parts.length > 1) ? parts[1] : "Oyuncu " + playerId;
+
+        playerNames.put(playerId, name);
+
+        logToGameConsole("Oyuncu kimliğiniz: " + playerId + " (" + name + ")");
+
+        Color c = getPlayerColor(playerId);
+        String colorName = getColorName(c);
+        playerColorLabel.setText("Renginiz: " + colorName);
+        playerColorLabel.setForeground(c);  // Rengi GUI'de göster
+    }
+
+    private String getColorName(Color c) {
+        if (c.equals(new Color(220, 20, 60))) {
+            return "Kırmızı";
+        }
+        if (c.equals(new Color(30, 144, 255))) {
+            return "Mavi";
+        }
+        return "Bilinmeyen";
     }
 
     private void handleMapCommand(String data) {
@@ -807,6 +911,8 @@ public class RiskClient extends JFrame {
         String[] parts = data.split(":");
         int turn = Integer.parseInt(parts[0]);
         int troops = Integer.parseInt(parts[1]);
+        String name = (parts.length >= 3) ? parts[2] : "Oyuncu " + turn;
+
         currentTurn = turn;
         // Seçimleri sıfırla
         selectedTerritory = null;
@@ -820,37 +926,38 @@ public class RiskClient extends JFrame {
             logToGameConsole("Sıra sizde! " + troops + " asker yerleştirin.");
             statusLabel.setText("Sıra sizde!");
             enableButtons(true);
+            startTurnTimer();
         } else {
             logToGameConsole("Rakibin sırası.");
-            statusLabel.setText("Rakip oynuyor...");
+            statusLabel.setText("Sıra: " + name);
             enableButtons(false);
         }
+
         troopsLeftLabel.setText("Kalan Asker: " + troops);
         selectedTerritory = null;
         targetTerritory = null;
         mapPanel.repaint();
     }
 
-private void handlePlaceResult(String data) {
-    String[] parts = data.split(":");
-    String territory = parts[0];
-    int troops = Integer.parseInt(parts[1]);
+    private void handlePlaceResult(String data) {
+        String[] parts = data.split(":");
+        String territory = parts[0];
+        int troops = Integer.parseInt(parts[1]);
 
-    Territory t = territories.get(territory);
-    if (t != null) {
-        t.setTroops(troops);
+        Territory t = territories.get(territory);
+        if (t != null) {
+            t.setTroops(troops);
+        }
+
+        int updated = Integer.parseInt(parts[2]);
+        playerTroopsToPlace.put(playerId, updated);
+        troopsLeftLabel.setText("Kalan Asker: " + updated);
+        mapPanel.repaint();
+
+        if (updated == 0 && currentTurn == playerId) {
+            enableButtons(true);
+        }
     }
-
-    int updated = Integer.parseInt(parts[2]);
-    playerTroopsToPlace.put(playerId, updated);
-    troopsLeftLabel.setText("Kalan Asker: " + updated);
-    mapPanel.repaint();
-
-    if (updated == 0 && currentTurn == playerId) {
-        enableButtons(true);
-    }
-}
-
 
     private void handleAttackResult(String data) {
         String[] parts = data.split(":");
@@ -902,16 +1009,28 @@ private void handlePlaceResult(String data) {
     }
 
     private void handleGameOverCommand(String data) {
-        int winner = Integer.parseInt(data);
+        int winnerId = Integer.parseInt(data);
         gameOver = true;
         selectedTerritory = null;
         targetTerritory = null;
         mapPanel.repaint();
 
-        String message = (winner == playerId)
+        String message = (winnerId == playerId)
                 ? "Tebrikler, kazandınız!"
-                : "Oyunu kaybettiniz. Kazanan: Oyuncu " + winner;
-        JOptionPane.showMessageDialog(this, message, "Oyun Bitti", JOptionPane.INFORMATION_MESSAGE);
+                : "Oyunu kaybettiniz. Kazanan: " + playerNames.get(winnerId);
+
+        int choice = JOptionPane.showConfirmDialog(this,
+                message + "\nYeniden başlatılsın mı?",
+                "Oyun Bitti", JOptionPane.YES_NO_OPTION);
+
+        if (choice == JOptionPane.YES_OPTION) {
+            sendCommand("RESTART");
+            logToGameConsole("Yeniden başlatma istendi.");
+        } else {
+            sendCommand("RESTART_DECLINE");
+            logToGameConsole("Yeniden başlatma isteğini reddettiniz.");
+        }
+
         statusLabel.setText("Oyun bitti.");
         enableButtons(false);
     }
@@ -920,7 +1039,7 @@ private void handlePlaceResult(String data) {
         if (enable && currentTurn != playerId) {
             enable = false; // sıran değilse aktif etme
         }
-        
+
         int troops = playerTroopsToPlace.getOrDefault(playerId, 0);
         placeTroopsButton.setEnabled(enable && troops > 0);
         attackButton.setEnabled(enable && troops == 0);
@@ -957,7 +1076,14 @@ private void handlePlaceResult(String data) {
             if (ip == null || ip.isBlank()) {
                 ip = "127.0.0.1";
             }
-            new RiskClient(ip, 9090);
+
+            String playerName = JOptionPane.showInputDialog("Oyuncu adınızı girin:");
+            if (playerName == null || playerName.isBlank()) {
+                playerName = "Oyuncu";
+            }
+
+            new RiskClient(ip, 9090, playerName);
         });
     }
+
 }
