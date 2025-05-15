@@ -2,6 +2,7 @@ package final_project;
 
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 
 /**
  * İstemci bağlantılarını yöneten ve komutları işleyen sınıf
@@ -63,16 +64,18 @@ public class ClientHandler implements Runnable {
         String data = parts.length > 1 ? parts[1] : "";
 
         switch (cmd) {
-            case "PLACE_TROOPS":
-                try {
-                String[] subParts = data.split(" ");
-                String territory = subParts[0];
-                int troops = Integer.parseInt(subParts[1]);
-                riskMatch.handlePlaceTroops(playerId, territory, troops);  // 🔹 Artık RiskMatch yönetecek
-            } catch (Exception e) {
-                sendMessage("ERROR Geçersiz komut formatı");
-            }
-            break;
+case "PLACE_TROOPS":
+    try {
+        String[] subParts = data.split(" ");
+        int lastIndex = subParts.length - 1;
+        int troops = Integer.parseInt(subParts[lastIndex]);
+        String territory = String.join(" ", Arrays.copyOfRange(subParts, 0, lastIndex));
+        riskMatch.handlePlaceTroops(playerId, territory, troops);
+    } catch (Exception e) {
+        sendMessage("ERROR Geçersiz komut formatı");
+    }
+    break;
+
 
             case "ATTACK":
                 try {

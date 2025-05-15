@@ -22,16 +22,15 @@ public class RiskGame {
     /**
      * Oyunu başlatır ve başlangıç durumunu ayarlar
      */
-public void initializeGame(int playerId1, int playerId2) {
-    createTerritories();
-    defineAdjacencies();
-    defineContinents();
-    distributeTerritories(playerId1, playerId2);
+    public void initializeGame(int playerId1, int playerId2) {
+        createTerritories();
+        defineAdjacencies();
+        defineContinents();
+        distributeTerritories(playerId1, playerId2);
 
-    playerTroopsToPlace.put(playerId1, INITIAL_TROOPS);
-    playerTroopsToPlace.put(playerId2, INITIAL_TROOPS);
-}
-
+        playerTroopsToPlace.put(playerId1, INITIAL_TROOPS);
+        playerTroopsToPlace.put(playerId2, INITIAL_TROOPS);
+    }
 
     /**
      * Bölgeleri oluşturur
@@ -50,6 +49,17 @@ public void initializeGame(int playerId1, int playerId2) {
         territories.put("Çin", new Territory("Çin", -1, 0));
         territories.put("Hindistan", new Territory("Hindistan", -1, 0));
         territories.put("Japonya", new Territory("Japonya", -1, 0));
+
+        // Avrupa
+        territories.put("Ukrayna", new Territory("Ukrayna", -1, 0));
+        territories.put("İsveç", new Territory("İsveç", -1, 0));
+        territories.put("İtalya", new Territory("İtalya", -1, 0));
+
+// Asya
+        territories.put("Rusya", new Territory("Rusya", -1, 0));
+        territories.put("Güney Kore", new Territory("Güney Kore", -1, 0));
+        territories.put("Suudi Arabistan", new Territory("Suudi Arabistan", -1, 0));
+
     }
 
     /**
@@ -57,28 +67,38 @@ public void initializeGame(int playerId1, int playerId2) {
      */
     private void defineAdjacencies() {
         // Türkiye'nin komşuları
-        adjacencyMap.put("Türkiye", Arrays.asList("Almanya", "Fransa", "Mısır", "Hindistan"));
+        adjacencyMap.put("Türkiye", Arrays.asList("Almanya", "Fransa", "Mısır", "Hindistan", "Ukrayna", "İtalya", "Suudi Arabistan"));
 
         // Almanya'nın komşuları
-        adjacencyMap.put("Almanya", Arrays.asList("Türkiye", "Fransa"));
+        adjacencyMap.put("Almanya", Arrays.asList("Türkiye", "Fransa", "Ukrayna", "İsveç"));
 
         // Fransa'nın komşuları
-        adjacencyMap.put("Fransa", Arrays.asList("Türkiye", "Almanya", "Fas"));
+        adjacencyMap.put("Fransa", Arrays.asList("Türkiye", "Almanya", "Fas", "İtalya"));
 
         // Mısır'ın komşuları
-        adjacencyMap.put("Mısır", Arrays.asList("Türkiye", "Fas", "Hindistan"));
+        adjacencyMap.put("Mısır", Arrays.asList("Fas", "Türkiye", "Suudi Arabistan"));
 
         // Fas'ın komşuları
         adjacencyMap.put("Fas", Arrays.asList("Fransa", "Mısır"));
 
         // Hindistan'ın komşuları
-        adjacencyMap.put("Hindistan", Arrays.asList("Türkiye", "Mısır", "Çin"));
+        adjacencyMap.put("Hindistan", Arrays.asList("Türkiye", "Çin", "Suudi Arabistan"));
 
         // Çin'in komşuları
-        adjacencyMap.put("Çin", Arrays.asList("Hindistan", "Japonya"));
+        adjacencyMap.put("Çin", Arrays.asList("Hindistan", "Japonya", "Rusya", "Güney Kore"));
 
         // Japonya'nın komşuları
-        adjacencyMap.put("Japonya", Arrays.asList("Çin"));
+        adjacencyMap.put("Japonya", Arrays.asList("Çin", "Güney Kore"));
+
+        // Yeni Komşuluklar
+        adjacencyMap.put("Ukrayna", Arrays.asList("Türkiye", "Almanya", "Rusya"));
+        adjacencyMap.put("İsveç", Arrays.asList("Almanya", "Rusya"));
+        adjacencyMap.put("İtalya", Arrays.asList("Fransa", "Türkiye"));
+
+        adjacencyMap.put("Rusya", Arrays.asList("Ukrayna", "İsveç", "Çin"));
+        adjacencyMap.put("Güney Kore", Arrays.asList("Japonya", "Çin"));
+        adjacencyMap.put("Suudi Arabistan", Arrays.asList("Hindistan", "Mısır", "Türkiye"));
+
     }
 
     /**
@@ -86,9 +106,9 @@ public void initializeGame(int playerId1, int playerId2) {
      */
     private void defineContinents() {
         // Kıtalar ve içerdiği bölgeler
-        continentTerritories.put("Avrupa", Arrays.asList("Türkiye", "Almanya", "Fransa"));
+        continentTerritories.put("Avrupa", Arrays.asList("Türkiye", "Almanya", "Fransa", "Ukrayna", "İsveç", "İtalya"));
         continentTerritories.put("Afrika", Arrays.asList("Mısır", "Fas"));
-        continentTerritories.put("Asya", Arrays.asList("Çin", "Hindistan", "Japonya"));
+        continentTerritories.put("Asya", Arrays.asList("Çin", "Hindistan", "Japonya", "Rusya", "Güney Kore", "Suudi Arabistan"));
 
         // Bölgelerin hangi kıtada olduğu
         territoryToContinentMap.put("Türkiye", "Avrupa");
@@ -99,6 +119,13 @@ public void initializeGame(int playerId1, int playerId2) {
         territoryToContinentMap.put("Çin", "Asya");
         territoryToContinentMap.put("Hindistan", "Asya");
         territoryToContinentMap.put("Japonya", "Asya");
+        territoryToContinentMap.put("Ukrayna", "Avrupa");
+        territoryToContinentMap.put("İsveç", "Avrupa");
+        territoryToContinentMap.put("İtalya", "Avrupa");
+
+        territoryToContinentMap.put("Rusya", "Asya");
+        territoryToContinentMap.put("Güney Kore", "Asya");
+        territoryToContinentMap.put("Suudi Arabistan", "Asya");
 
         // Kıta bonusları
         continentBonus.put("Avrupa", 3);  // Avrupa'nın tüm bölgelerine sahip olan 3 asker bonus alır
@@ -109,18 +136,17 @@ public void initializeGame(int playerId1, int playerId2) {
     /**
      * Bölgeleri rastgele dağıtır
      */
-  private void distributeTerritories(int player1Id, int player2Id) {
-    List<String> territoryNames = new ArrayList<>(territories.keySet());
-    Collections.shuffle(territoryNames);
+    private void distributeTerritories(int player1Id, int player2Id) {
+        List<String> territoryNames = new ArrayList<>(territories.keySet());
+        Collections.shuffle(territoryNames);
 
-    for (int i = 0; i < territoryNames.size(); i++) {
-        String territory = territoryNames.get(i);
-        int owner = (i % 2 == 0) ? player1Id : player2Id;
-        territories.get(territory).setOwner(owner);
-        territories.get(territory).setTroops(1);
+        for (int i = 0; i < territoryNames.size(); i++) {
+            String territory = territoryNames.get(i);
+            int owner = (i % 2 == 0) ? player1Id : player2Id;
+            territories.get(territory).setOwner(owner);
+            territories.get(territory).setTroops(1);
+        }
     }
-}
-
 
     /**
      * Sırayı bir sonraki oyuncuya geçirir ve asker dağıtımını hesaplar

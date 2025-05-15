@@ -11,6 +11,8 @@ import java.util.List;
 import javax.swing.border.*;
 import java.util.Timer;
 import java.util.TimerTask;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 
 /**
  * Risk oyunu için geliştirilmiş istemci uygulaması
@@ -18,6 +20,10 @@ import java.util.TimerTask;
 public class RiskClient extends JFrame {
 
     private JLabel troopsLeftLabel;
+    private BufferedImage worldMap;
+    private final int MAP_WIDTH = 1200;
+    private final int MAP_HEIGHT = 700;
+
     private JLabel playerColorLabel;
     private Socket socket;
     private PrintWriter out;
@@ -257,14 +263,56 @@ public class RiskClient extends JFrame {
     }
 
     private void initializeTerritoryPositions() {
-        territoryPositions.put("Türkiye", new Point(500, 250));
-        territoryPositions.put("Almanya", new Point(400, 150));
-        territoryPositions.put("Fransa", new Point(300, 200));
-        territoryPositions.put("Mısır", new Point(550, 350));
-        territoryPositions.put("Fas", new Point(250, 350));
-        territoryPositions.put("Çin", new Point(700, 200));
-        territoryPositions.put("Hindistan", new Point(650, 300));
-        territoryPositions.put("Japonya", new Point(800, 150));
+territoryPositions.put("Alaska", new Point(80, 120));
+territoryPositions.put("Kuzeybatı Toprakları", new Point(160, 100));
+territoryPositions.put("Grönland", new Point(350, 70));
+territoryPositions.put("Alberta", new Point(140, 160));
+territoryPositions.put("Ontario", new Point(210, 160));
+territoryPositions.put("Quebec", new Point(290, 150));
+territoryPositions.put("Batı ABD", new Point(150, 230));
+territoryPositions.put("Doğu ABD", new Point(220, 230));
+territoryPositions.put("Orta Amerika", new Point(170, 290));
+
+territoryPositions.put("Venezuela", new Point(240, 340));
+territoryPositions.put("Peru", new Point(240, 400));
+territoryPositions.put("Brezilya", new Point(300, 380));
+territoryPositions.put("Arjantin", new Point(270, 480));
+
+territoryPositions.put("İzlanda", new Point(430, 100));
+territoryPositions.put("İskandinavya", new Point(500, 100));
+territoryPositions.put("Ukrayna", new Point(590, 150));
+territoryPositions.put("Britanya", new Point(430, 160));
+territoryPositions.put("Kuzey Avrupa", new Point(500, 170));
+territoryPositions.put("Batı Avrupa", new Point(470, 210));
+territoryPositions.put("Güney Avrupa", new Point(520, 220));
+
+territoryPositions.put("Kuzey Afrika", new Point(480, 300));
+territoryPositions.put("Mısır", new Point(550, 300));
+territoryPositions.put("Doğu Afrika", new Point(570, 370));
+territoryPositions.put("Kongo", new Point(500, 390));
+territoryPositions.put("Güney Afrika", new Point(510, 470));
+territoryPositions.put("Madagaskar", new Point(590, 470));
+
+territoryPositions.put("Ural", new Point(660, 150));
+territoryPositions.put("Sibirya", new Point(730, 120));
+territoryPositions.put("Yakutsk", new Point(820, 100));
+territoryPositions.put("Kamçatka", new Point(930, 110));
+territoryPositions.put("Irkutsk", new Point(780, 170));
+territoryPositions.put("Moğolistan", new Point(820, 200));
+territoryPositions.put("Japonya", new Point(940, 200));
+territoryPositions.put("Çin", new Point(760, 240));
+territoryPositions.put("Hindistan", new Point(700, 280));
+territoryPositions.put("Orta Doğu", new Point(620, 270));
+territoryPositions.put("Afganistan", new Point(660, 220));
+territoryPositions.put("Güneydoğu Asya", new Point(780, 300));
+
+territoryPositions.put("Endonezya", new Point(800, 400));
+territoryPositions.put("Yeni Gine", new Point(880, 410));
+territoryPositions.put("Batı Avustralya", new Point(820, 490));
+territoryPositions.put("Doğu Avustralya", new Point(890, 490));
+
+
+
     }
 
     private void initializeContinentColors() {
@@ -275,6 +323,12 @@ public class RiskClient extends JFrame {
 
     private void initializeUI() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
+        try {
+            worldMap = ImageIO.read(getClass().getResourceAsStream("/risk_map.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         setSize(1200, 700);
         setMinimumSize(new Dimension(900, 600));
         setLayout(new BorderLayout());
@@ -286,8 +340,17 @@ public class RiskClient extends JFrame {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                drawMap(g);
+                Graphics2D g2d = (Graphics2D) g;
+
+                if (worldMap != null) {
+                    g2d.drawImage(worldMap, 0, 0, getWidth(), getHeight(), null);
+                }
+
+                // Harita üstüne overlay'ler
+                drawTerritoryConnections(g2d);
+                drawTerritories(g2d);
             }
+
         };
         mapPanel.setBackground(new Color(240, 248, 255));
         mapPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
@@ -483,7 +546,10 @@ public class RiskClient extends JFrame {
         drawContinent(g2d, new Point[]{
             territoryPositions.get("Türkiye"),
             territoryPositions.get("Almanya"),
-            territoryPositions.get("Fransa")
+            territoryPositions.get("Fransa"),
+            territoryPositions.get("Ukrayna"),
+            territoryPositions.get("İsveç"),
+            territoryPositions.get("İtalya")
         }, continentColors.get("Avrupa"));
 
         drawContinent(g2d, new Point[]{
@@ -494,8 +560,12 @@ public class RiskClient extends JFrame {
         drawContinent(g2d, new Point[]{
             territoryPositions.get("Çin"),
             territoryPositions.get("Hindistan"),
-            territoryPositions.get("Japonya")
+            territoryPositions.get("Japonya"),
+            territoryPositions.get("Rusya"),
+            territoryPositions.get("Güney Kore"),
+            territoryPositions.get("Suudi Arabistan")
         }, continentColors.get("Asya"));
+
     }
 
     private void drawContinent(Graphics2D g2d, Point[] points, Color color) {
@@ -539,17 +609,39 @@ public class RiskClient extends JFrame {
         drawConnection(g2d, "Mısır", "Hindistan");
         drawConnection(g2d, "Hindistan", "Çin");
         drawConnection(g2d, "Çin", "Japonya");
+
+        drawConnection(g2d, "Türkiye", "Ukrayna");
+        drawConnection(g2d, "Almanya", "Ukrayna");
+        drawConnection(g2d, "Almanya", "İsveç");
+        drawConnection(g2d, "Fransa", "İtalya");
+        drawConnection(g2d, "Türkiye", "İtalya");
+
+        drawConnection(g2d, "Ukrayna", "Rusya");
+        drawConnection(g2d, "İsveç", "Rusya");
+        drawConnection(g2d, "Rusya", "Çin");
+        drawConnection(g2d, "Çin", "Güney Kore");
+        drawConnection(g2d, "Çin", "Suudi Arabistan");
+        drawConnection(g2d, "Suudi Arabistan", "Türkiye");
+        drawConnection(g2d, "Suudi Arabistan", "Mısır");
+        drawConnection(g2d, "Suudi Arabistan", "Hindistan");
+
     }
 
     private void drawConnection(Graphics2D g2d, String t1, String t2) {
-        if (!territoryPositions.containsKey(t1) || !territoryPositions.containsKey(t2)) {
-            return;
-        }
+    Point p1 = territoryPositions.get(t1);
+    Point p2 = territoryPositions.get(t2);
+    if (p1 == null || p2 == null) return;
 
-        Point p1 = territoryPositions.get(t1);
-        Point p2 = territoryPositions.get(t2);
-        g2d.drawLine(p1.x, p1.y, p2.x, p2.y);
-    }
+    int w = mapPanel.getWidth();
+    int h = mapPanel.getHeight();
+
+    int x1 = p1.x * w / MAP_WIDTH;
+    int y1 = p1.y * h / MAP_HEIGHT;
+    int x2 = p2.x * w / MAP_WIDTH;
+    int y2 = p2.y * h / MAP_HEIGHT;
+
+    g2d.drawLine(x1, y1, x2, y2);
+}
 
     private void drawTerritories(Graphics2D g2d) {
         for (Map.Entry<String, Territory> entry : territories.entrySet()) {
@@ -584,41 +676,49 @@ public class RiskClient extends JFrame {
         diceDialog.setVisible(true);
     }
 
-    private void drawTerritory(Graphics2D g2d, String name, Territory t) {
-        Point pos = territoryPositions.get(name);
-        int radius = 35;
+   private void drawTerritory(Graphics2D g2d, String name, Territory t) {
+    Point pos = territoryPositions.get(name);
+    if (pos == null) return;
 
-        boolean isSelected = name.equals(selectedTerritory);
-        boolean isTarget = name.equals(targetTerritory);
+    int panelWidth = mapPanel.getWidth();
+    int panelHeight = mapPanel.getHeight();
 
-        Color background = getPlayerColor(t.getOwner());
-        g2d.setColor(background);
-        g2d.fillOval(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
+    int scaledX = pos.x * panelWidth / MAP_WIDTH;
+    int scaledY = pos.y * panelHeight / MAP_HEIGHT;
+    int radius = 35 * panelWidth / MAP_WIDTH;
 
-        if (isSelected) {
-            g2d.setColor(SELECTED_COLOR);
-            g2d.fillOval(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
-        } else if (isTarget) {
-            g2d.setColor(TARGET_COLOR);
-            g2d.fillOval(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
-        }
+    boolean isSelected = name.equals(selectedTerritory);
+    boolean isTarget = name.equals(targetTerritory);
 
-        g2d.setColor(Color.BLACK);
-        g2d.setStroke(new BasicStroke(2.0f));
-        g2d.drawOval(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
+    Color background = getPlayerColor(t.getOwner());
+    g2d.setColor(background);
+    g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
 
-        g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("Arial", Font.BOLD, 12));
-        FontMetrics fm = g2d.getFontMetrics();
-        int textWidth = fm.stringWidth(name);
-        g2d.drawString(name, pos.x - textWidth / 2, pos.y - radius - 5);
-
-        g2d.setFont(new Font("Arial", Font.BOLD, 16));
-        fm = g2d.getFontMetrics();
-        String troops = String.valueOf(t.getTroops());
-        int tw = fm.stringWidth(troops);
-        g2d.drawString(troops, pos.x - tw / 2, pos.y + 5);
+    if (isSelected) {
+        g2d.setColor(SELECTED_COLOR);
+        g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
+    } else if (isTarget) {
+        g2d.setColor(TARGET_COLOR);
+        g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
     }
+
+    g2d.setColor(Color.BLACK);
+    g2d.setStroke(new BasicStroke(2.0f));
+    g2d.drawOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
+
+    g2d.setColor(Color.BLACK);
+    g2d.setFont(new Font("Arial", Font.BOLD, 12));
+    FontMetrics fm = g2d.getFontMetrics();
+    int textWidth = fm.stringWidth(name);
+    g2d.drawString(name, scaledX - textWidth / 2, scaledY - radius - 5);
+
+    g2d.setFont(new Font("Arial", Font.BOLD, 16));
+    fm = g2d.getFontMetrics();
+    String troops = String.valueOf(t.getTroops());
+    int tw = fm.stringWidth(troops);
+    g2d.drawString(troops, scaledX - tw / 2, scaledY + 5);
+}
+
 
     private void handleMapClick(Point point) {
         if (gameOver) {
