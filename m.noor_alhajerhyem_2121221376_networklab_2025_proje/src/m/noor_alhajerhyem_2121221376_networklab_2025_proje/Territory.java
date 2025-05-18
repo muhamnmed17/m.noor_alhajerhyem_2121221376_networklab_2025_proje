@@ -7,6 +7,7 @@ public class Territory {
     private String name;
     private int owner;
     private int troops;
+private int troopCount;
 
     /**
      * Yeni bir bölge oluşturur
@@ -35,6 +36,9 @@ public class Territory {
     public int getOwner() {
         return owner;
     }
+public int getTroopCount() {
+    return troopCount;
+}
 
     /**
      * Bölgedeki asker sayısını döndürür

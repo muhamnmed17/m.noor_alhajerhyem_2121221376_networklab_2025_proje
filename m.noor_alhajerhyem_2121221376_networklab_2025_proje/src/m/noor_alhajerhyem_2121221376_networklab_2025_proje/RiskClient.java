@@ -33,6 +33,8 @@ public class RiskClient extends JFrame {
     private Timer turnTimer;
     private int secondsLeft;
     private JLabel timerLabel;
+    private String selectedTerritory = null;
+    private List<String> highlightedTargets = new ArrayList<>();
 
     private int playerId = -1;
 
@@ -60,7 +62,6 @@ public class RiskClient extends JFrame {
     private JTextArea gameLogArea;
     private JButton placeTroopsButton, attackButton, fortifyButton, endTurnButton;
 
-    private String selectedTerritory = null;
     private String targetTerritory = null;
     private boolean attackMode = false;
     private boolean fortifyMode = false;
@@ -104,6 +105,17 @@ public class RiskClient extends JFrame {
             gameLogArea.append(timestamp + message + "\n");
             gameLogArea.setCaretPosition(gameLogArea.getDocument().getLength());
         });
+    }
+
+    private void setSelectedTerritory(String name) {
+        selectedTerritory = name;
+        highlightedTargets.clear();
+
+        if (name != null && adjacencyMap.containsKey(name)) {
+            highlightedTargets.addAll(adjacencyMap.get(name));
+        }
+
+        mapPanel.repaint(); // Görseli güncelle
     }
 
     private JPanel createRightPanel() {
@@ -263,55 +275,59 @@ public class RiskClient extends JFrame {
     }
 
     private void initializeTerritoryPositions() {
-territoryPositions.put("Alaska", new Point(80, 120));
-territoryPositions.put("Kuzeybatı Toprakları", new Point(160, 100));
-territoryPositions.put("Grönland", new Point(350, 70));
-territoryPositions.put("Alberta", new Point(140, 160));
-territoryPositions.put("Ontario", new Point(210, 160));
-territoryPositions.put("Quebec", new Point(290, 150));
-territoryPositions.put("Batı ABD", new Point(150, 230));
-territoryPositions.put("Doğu ABD", new Point(220, 230));
-territoryPositions.put("Orta Amerika", new Point(170, 290));
+// KUZEY AMERİKA (Sarı Bölge)
+        territoryPositions.put("Alaska", new Point(91, 106)); // ✓ DOĞRU
+        territoryPositions.put("Kuzeybatı Toprakları", new Point(206, 109));
+        territoryPositions.put("Grönland", new Point(418, 60));
+        territoryPositions.put("Alberta", new Point(186, 160));
+        territoryPositions.put("Ontario", new Point(272, 179));
+        territoryPositions.put("Quebec", new Point(344, 170));
+        territoryPositions.put("Batı ABD", new Point(188, 235));
+        territoryPositions.put("Doğu ABD", new Point(279, 254));
+        territoryPositions.put("Orta Amerika", new Point(204, 321));
 
-territoryPositions.put("Venezuela", new Point(240, 340));
-territoryPositions.put("Peru", new Point(240, 400));
-territoryPositions.put("Brezilya", new Point(300, 380));
-territoryPositions.put("Arjantin", new Point(270, 480));
+// GÜNEY AMERİKA (Turuncu Bölge)
+        territoryPositions.put("Venezuela", new Point(284, 385));
+        territoryPositions.put("Peru", new Point(246, 453));
+        territoryPositions.put("Brezilya", new Point(373, 446));
+        territoryPositions.put("Arjantin", new Point(313, 564));
 
-territoryPositions.put("İzlanda", new Point(430, 100));
-territoryPositions.put("İskandinavya", new Point(500, 100));
-territoryPositions.put("Ukrayna", new Point(590, 150));
-territoryPositions.put("Britanya", new Point(430, 160));
-territoryPositions.put("Kuzey Avrupa", new Point(500, 170));
-territoryPositions.put("Batı Avrupa", new Point(470, 210));
-territoryPositions.put("Güney Avrupa", new Point(520, 220));
+// AVRUPA (Mavi Bölge)
+        territoryPositions.put("İzlanda", new Point(511, 142));
+        territoryPositions.put("Britanya", new Point(500, 209));
+        territoryPositions.put("İskandinavya", new Point(607, 135));
+        territoryPositions.put("Kuzey Avrupa", new Point(596, 227));
+        territoryPositions.put("Batı Avrupa", new Point(508, 317));
+        territoryPositions.put("Güney Avrupa", new Point(614, 287));
+        territoryPositions.put("Ukrayna", new Point(704, 187));
 
-territoryPositions.put("Kuzey Afrika", new Point(480, 300));
-territoryPositions.put("Mısır", new Point(550, 300));
-territoryPositions.put("Doğu Afrika", new Point(570, 370));
-territoryPositions.put("Kongo", new Point(500, 390));
-territoryPositions.put("Güney Afrika", new Point(510, 470));
-territoryPositions.put("Madagaskar", new Point(590, 470));
+// AFRİKA (Kahverengi Bölge)
+        territoryPositions.put("Kuzey Afrika", new Point(535, 409)); // ✓ DOĞRU
+        territoryPositions.put("Mısır", new Point(644, 383)); // ✓ DOĞRU
+        territoryPositions.put("Doğu Afrika", new Point(706, 464));
+        territoryPositions.put("Kongo", new Point(643, 503));
+        territoryPositions.put("Güney Afrika", new Point(655, 599));
+        territoryPositions.put("Madagaskar", new Point(761, 592));
 
-territoryPositions.put("Ural", new Point(660, 150));
-territoryPositions.put("Sibirya", new Point(730, 120));
-territoryPositions.put("Yakutsk", new Point(820, 100));
-territoryPositions.put("Kamçatka", new Point(930, 110));
-territoryPositions.put("Irkutsk", new Point(780, 170));
-territoryPositions.put("Moğolistan", new Point(820, 200));
-territoryPositions.put("Japonya", new Point(940, 200));
-territoryPositions.put("Çin", new Point(760, 240));
-territoryPositions.put("Hindistan", new Point(700, 280));
-territoryPositions.put("Orta Doğu", new Point(620, 270));
-territoryPositions.put("Afganistan", new Point(660, 220));
-territoryPositions.put("Güneydoğu Asya", new Point(780, 300));
+// ASYA (Yeşil Bölge)
+        territoryPositions.put("Ural", new Point(818, 158));
+        territoryPositions.put("Sibirya", new Point(889, 110));
+        territoryPositions.put("Yakutsk", new Point(971, 94)); // ✓ DOĞRU
+        territoryPositions.put("Kamçatka", new Point(1072, 99));
+        territoryPositions.put("Irkutsk", new Point(956, 182));
+        territoryPositions.put("Moğolistan", new Point(969, 237));
+        territoryPositions.put("Çin", new Point(956, 308));
+        territoryPositions.put("Japonya", new Point(1088, 250));
+        territoryPositions.put("Afganistan", new Point(807, 254));
+        territoryPositions.put("Hindistan", new Point(879, 391)); // ✓ DOĞRU
+        territoryPositions.put("Orta Doğu", new Point(735, 364));
+        territoryPositions.put("Güneydoğu Asya", new Point(962, 385));
 
-territoryPositions.put("Endonezya", new Point(800, 400));
-territoryPositions.put("Yeni Gine", new Point(880, 410));
-territoryPositions.put("Batı Avustralya", new Point(820, 490));
-territoryPositions.put("Doğu Avustralya", new Point(890, 490));
-
-
+// AVUSTRALYA (Mor Bölge)
+        territoryPositions.put("Endonezya", new Point(985, 488));
+        territoryPositions.put("Yeni Gine", new Point(1084, 467));
+        territoryPositions.put("Batı Avustralya", new Point(1024, 580));
+        territoryPositions.put("Doğu Avustralya", new Point(1136, 576));
 
     }
 
@@ -347,19 +363,19 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
                 }
 
                 // Harita üstüne overlay'ler
-                drawTerritoryConnections(g2d);
                 drawTerritories(g2d);
             }
-
         };
-        mapPanel.setBackground(new Color(240, 248, 255));
-        mapPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+
         mapPanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                handleMapClick(e.getPoint());
+                int realX = e.getX() * 1200 / mapPanel.getWidth();
+                int realY = e.getY() * 700 / mapPanel.getHeight();
+                handleMapClick(new Point(realX, realY));
             }
         });
+
         mainPanel.add(mapPanel, BorderLayout.CENTER);
 
         JPanel rightPanel = createRightPanel();
@@ -377,6 +393,23 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
 
         setLocationRelativeTo(null);
         setVisible(true);
+    }
+
+    private void updateMap(String data) {
+        territories.clear();
+        String[] entries = data.split(";");
+        for (String entry : entries) {
+            String[] parts = entry.split(":");
+            if (parts.length >= 3) {
+                String name = parts[0];
+                int owner = Integer.parseInt(parts[1]);
+                int troops = Integer.parseInt(parts[2]);
+
+                Territory t = new Territory(name, owner, troops);
+                territories.put(name, t);
+            }
+        }
+        mapPanel.repaint();
     }
 
     /**
@@ -538,7 +571,7 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         drawContinents(g2d);
-        drawTerritoryConnections(g2d);
+
         drawTerritories(g2d);
     }
 
@@ -593,55 +626,23 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
         g2d.fillOval(minX, minY, maxX - minX, maxY - minY);
     }
 
-    private void drawTerritoryConnections(Graphics2D g2d) {
-        g2d.setStroke(new BasicStroke(2.0f));
-        g2d.setColor(Color.GRAY);
-
-        drawConnection(g2d, "Türkiye", "Almanya");
-        drawConnection(g2d, "Türkiye", "Fransa");
-        drawConnection(g2d, "Almanya", "Fransa");
-
-        drawConnection(g2d, "Türkiye", "Mısır");
-        drawConnection(g2d, "Fransa", "Fas");
-        drawConnection(g2d, "Mısır", "Fas");
-
-        drawConnection(g2d, "Türkiye", "Hindistan");
-        drawConnection(g2d, "Mısır", "Hindistan");
-        drawConnection(g2d, "Hindistan", "Çin");
-        drawConnection(g2d, "Çin", "Japonya");
-
-        drawConnection(g2d, "Türkiye", "Ukrayna");
-        drawConnection(g2d, "Almanya", "Ukrayna");
-        drawConnection(g2d, "Almanya", "İsveç");
-        drawConnection(g2d, "Fransa", "İtalya");
-        drawConnection(g2d, "Türkiye", "İtalya");
-
-        drawConnection(g2d, "Ukrayna", "Rusya");
-        drawConnection(g2d, "İsveç", "Rusya");
-        drawConnection(g2d, "Rusya", "Çin");
-        drawConnection(g2d, "Çin", "Güney Kore");
-        drawConnection(g2d, "Çin", "Suudi Arabistan");
-        drawConnection(g2d, "Suudi Arabistan", "Türkiye");
-        drawConnection(g2d, "Suudi Arabistan", "Mısır");
-        drawConnection(g2d, "Suudi Arabistan", "Hindistan");
-
-    }
-
     private void drawConnection(Graphics2D g2d, String t1, String t2) {
-    Point p1 = territoryPositions.get(t1);
-    Point p2 = territoryPositions.get(t2);
-    if (p1 == null || p2 == null) return;
+        Point p1 = territoryPositions.get(t1);
+        Point p2 = territoryPositions.get(t2);
+        if (p1 == null || p2 == null) {
+            return;
+        }
 
-    int w = mapPanel.getWidth();
-    int h = mapPanel.getHeight();
+        int w = mapPanel.getWidth();
+        int h = mapPanel.getHeight();
 
-    int x1 = p1.x * w / MAP_WIDTH;
-    int y1 = p1.y * h / MAP_HEIGHT;
-    int x2 = p2.x * w / MAP_WIDTH;
-    int y2 = p2.y * h / MAP_HEIGHT;
+        int x1 = p1.x * w / MAP_WIDTH;
+        int y1 = p1.y * h / MAP_HEIGHT;
+        int x2 = p2.x * w / MAP_WIDTH;
+        int y2 = p2.y * h / MAP_HEIGHT;
 
-    g2d.drawLine(x1, y1, x2, y2);
-}
+        g2d.drawLine(x1, y1, x2, y2);
+    }
 
     private void drawTerritories(Graphics2D g2d) {
         for (Map.Entry<String, Territory> entry : territories.entrySet()) {
@@ -676,49 +677,50 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
         diceDialog.setVisible(true);
     }
 
-   private void drawTerritory(Graphics2D g2d, String name, Territory t) {
-    Point pos = territoryPositions.get(name);
-    if (pos == null) return;
+    private void drawTerritory(Graphics2D g2d, String name, Territory t) {
+        Point pos = territoryPositions.get(name);
+        if (pos == null) {
+            return;
+        }
 
-    int panelWidth = mapPanel.getWidth();
-    int panelHeight = mapPanel.getHeight();
+        int panelWidth = mapPanel.getWidth();
+        int panelHeight = mapPanel.getHeight();
 
-    int scaledX = pos.x * panelWidth / MAP_WIDTH;
-    int scaledY = pos.y * panelHeight / MAP_HEIGHT;
-    int radius = 35 * panelWidth / MAP_WIDTH;
+        int scaledX = pos.x * panelWidth / MAP_WIDTH;
+        int scaledY = pos.y * panelHeight / MAP_HEIGHT;
+        int radius = 20 * panelWidth / MAP_WIDTH;
 
-    boolean isSelected = name.equals(selectedTerritory);
-    boolean isTarget = name.equals(targetTerritory);
+        boolean isSelected = name.equals(selectedTerritory);
+        boolean isTarget = highlightedTargets.contains(name);
 
-    Color background = getPlayerColor(t.getOwner());
-    g2d.setColor(background);
-    g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
-
-    if (isSelected) {
-        g2d.setColor(SELECTED_COLOR);
+        Color background = getPlayerColor(t.getOwner());
+        g2d.setColor(background);
         g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
-    } else if (isTarget) {
-        g2d.setColor(TARGET_COLOR);
-        g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
+
+        if (isSelected) {
+            g2d.setColor(SELECTED_COLOR);
+            g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
+        } else if (isTarget) {
+            g2d.setColor(TARGET_COLOR);
+            g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
+        }
+
+        g2d.setColor(Color.BLACK);
+        g2d.setStroke(new BasicStroke(2.0f));
+        g2d.drawOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
+
+        g2d.setColor(Color.BLACK);
+        g2d.setFont(new Font("Arial", Font.BOLD, 12));
+        FontMetrics fm = g2d.getFontMetrics();
+        int textWidth = fm.stringWidth(name);
+        g2d.drawString(name, scaledX - textWidth / 2, scaledY - radius - 5);
+
+        g2d.setFont(new Font("Arial", Font.BOLD, 16));
+        fm = g2d.getFontMetrics();
+        String troops = String.valueOf(t.getTroops());
+        int tw = fm.stringWidth(troops);
+        g2d.drawString(troops, scaledX - tw / 2, scaledY + 5);
     }
-
-    g2d.setColor(Color.BLACK);
-    g2d.setStroke(new BasicStroke(2.0f));
-    g2d.drawOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
-
-    g2d.setColor(Color.BLACK);
-    g2d.setFont(new Font("Arial", Font.BOLD, 12));
-    FontMetrics fm = g2d.getFontMetrics();
-    int textWidth = fm.stringWidth(name);
-    g2d.drawString(name, scaledX - textWidth / 2, scaledY - radius - 5);
-
-    g2d.setFont(new Font("Arial", Font.BOLD, 16));
-    fm = g2d.getFontMetrics();
-    String troops = String.valueOf(t.getTroops());
-    int tw = fm.stringWidth(troops);
-    g2d.drawString(troops, scaledX - tw / 2, scaledY + 5);
-}
-
 
     private void handleMapClick(Point point) {
         if (gameOver) {
@@ -769,9 +771,8 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
 
         Territory t = territories.get(clicked);
         if (t != null && t.getOwner() == playerId) {
-            selectedTerritory = clicked;
+            setSelectedTerritory(clicked); // artık bu şekilde seçiliyor
             statusLabel.setText(clicked + " seçildi.");
-            mapPanel.repaint();
         }
     }
 
@@ -799,7 +800,8 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
         Territory t = territories.get(clicked);
         if (selectedTerritory == null) {
             if (t.getOwner() == playerId && t.getTroops() > 1) {
-                selectedTerritory = clicked;
+                setSelectedTerritory(clicked);
+
                 statusLabel.setText("Hedef seçin");
                 mapPanel.repaint();
             } else {
@@ -908,10 +910,26 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
         String data = parts.length > 1 ? parts[1] : "";
 
         switch (command) {
+            case "RESTART_PROMPT" -> {
+                int result = JOptionPane.showConfirmDialog(this,
+                        "Rakibiniz oyundan ayrıldı. Yeni bir rakiple oynamak ister misiniz?",
+                        "Oyun Bitti", JOptionPane.YES_NO_OPTION);
+
+                if (result == JOptionPane.YES_OPTION) {
+                    sendCommand("RESTART");
+                } else {
+                    sendCommand("RESTART_DECLINE");
+                    JOptionPane.showMessageDialog(this, "Oyun kapatılıyor. Görüşmek üzere!");
+                    cleanup();
+                    System.exit(0);
+                }
+            }
+
             case "INIT" ->
                 handleInitCommand(data);
+
             case "MAP" ->
-                handleMapCommand(data);
+                updateMap(data);
             case "TURN" ->
                 handleTurnCommand(data);
             case "PLACE_RESULT" ->
@@ -930,6 +948,10 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
                     logToGameConsole("Hata: " + data);
                 } else if (command.equals("INFO")) {
                     logToGameConsole(data);
+                    if (data.contains("Yeni bir rakip bekleniyor")) {
+                        statusLabel.setText("Yeni bir rakip bekleniyor...");
+                        enableButtons(false);
+                    }
 
                     if (data.contains("Diğer oyuncudan yeniden başlatma isteği")) {
                         int answer = JOptionPane.showConfirmDialog(this,
@@ -1007,7 +1029,7 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
         mapPanel.repaint();
     }
 
-    private void handleTurnCommand(String data) {
+     private void handleTurnCommand(String data) {
         String[] parts = data.split(":");
         int turn = Integer.parseInt(parts[0]);
         int troops = Integer.parseInt(parts[1]);
@@ -1038,6 +1060,8 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
         targetTerritory = null;
         mapPanel.repaint();
     }
+
+  
 
     private void handlePlaceResult(String data) {
         String[] parts = data.split(":");
@@ -1109,26 +1133,34 @@ territoryPositions.put("Doğu Avustralya", new Point(890, 490));
     }
 
     private void handleGameOverCommand(String data) {
-        int winnerId = Integer.parseInt(data);
         gameOver = true;
         selectedTerritory = null;
         targetTerritory = null;
         mapPanel.repaint();
 
-        String message = (winnerId == playerId)
-                ? "Tebrikler, kazandınız!"
-                : "Oyunu kaybettiniz. Kazanan: " + playerNames.get(winnerId);
+        try {
+            int winnerId = Integer.parseInt(data.trim());
 
-        int choice = JOptionPane.showConfirmDialog(this,
-                message + "\nYeniden başlatılsın mı?",
-                "Oyun Bitti", JOptionPane.YES_NO_OPTION);
+            String message = (winnerId == playerId)
+                    ? "Tebrikler, kazandınız!"
+                    : "Oyunu kaybettiniz. Kazanan: " + playerNames.get(winnerId);
 
-        if (choice == JOptionPane.YES_OPTION) {
-            sendCommand("RESTART");
-            logToGameConsole("Yeniden başlatma istendi.");
-        } else {
-            sendCommand("RESTART_DECLINE");
-            logToGameConsole("Yeniden başlatma isteğini reddettiniz.");
+            int choice = JOptionPane.showConfirmDialog(this,
+                    message + "\nYeniden başlatılsın mı?",
+                    "Oyun Bitti", JOptionPane.YES_NO_OPTION);
+
+            if (choice == JOptionPane.YES_OPTION) {
+                sendCommand("RESTART");
+                logToGameConsole("Yeniden başlatma istendi.");
+            } else {
+                sendCommand("RESTART_DECLINE");
+                logToGameConsole("Yeniden başlatma isteğini reddettiniz.");
+            }
+
+        } catch (NumberFormatException e) {
+            // Eğer gelen veri sayı değilse, mesaj olarak göster
+            JOptionPane.showMessageDialog(this, data, "Oyun Bitti", JOptionPane.INFORMATION_MESSAGE);
+            sendCommand("RESTART_DECLINE"); // güvenli çıkış
         }
 
         statusLabel.setText("Oyun bitti.");

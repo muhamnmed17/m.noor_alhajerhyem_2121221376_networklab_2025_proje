@@ -46,6 +46,7 @@ public class ClientHandler implements Runnable {
 
         } finally {
             try {
+                server.removeClient(this);
                 close();
             } catch (IOException e) {
                 System.err.println("Kapatma hatası: " + e.getMessage());
@@ -64,42 +65,73 @@ public class ClientHandler implements Runnable {
         String data = parts.length > 1 ? parts[1] : "";
 
         switch (cmd) {
-case "PLACE_TROOPS":
+   case "PLACE_TROOPS":
     try {
-        String[] subParts = data.split(" ");
+        if (data == null || data.isBlank()) {
+            sendMessage("ERROR Geçersiz komut formatı");
+            break;
+        }
+
+        String[] subParts = data.trim().split(" ");
+        if (subParts.length < 2) {
+            sendMessage("ERROR Geçersiz komut formatı (eksik bilgi)");
+            break;
+        }
+
         int lastIndex = subParts.length - 1;
         int troops = Integer.parseInt(subParts[lastIndex]);
         String territory = String.join(" ", Arrays.copyOfRange(subParts, 0, lastIndex));
         riskMatch.handlePlaceTroops(playerId, territory, troops);
     } catch (Exception e) {
-        sendMessage("ERROR Geçersiz komut formatı");
+        sendMessage("ERROR Yerleştirme ayrıştırılamadı");
     }
     break;
 
 
             case "ATTACK":
-                try {
+    try {
                 String[] subParts = data.split(" ");
-                String from = subParts[0];
-                String to = subParts[1];
-                int dice = Integer.parseInt(subParts[2]);
+                int dice = Integer.parseInt(subParts[subParts.length - 1]);
+
+                String territoryPart = String.join(" ", Arrays.copyOf(subParts, subParts.length - 1));
+                int sepIndex = territoryPart.lastIndexOf(' ');
+
+                if (sepIndex == -1) {
+                    sendMessage("ERROR Geçersiz komut formatı (from to dice)");
+                    break;
+                }
+
+                String from = territoryPart.substring(0, sepIndex);
+                String to = territoryPart.substring(sepIndex + 1);
+
                 riskMatch.handleAttack(playerId, from, to, dice);
             } catch (Exception e) {
-                sendMessage("ERROR Geçersiz komut formatı");
+                sendMessage("ERROR Saldırı ayrıştırılamadı");
             }
             break;
 
             case "FORTIFY":
-                try {
+    try {
                 String[] subParts = data.split(" ");
-                String from = subParts[0];
-                String to = subParts[1];
-                int troops = Integer.parseInt(subParts[2]);
+                int troops = Integer.parseInt(subParts[subParts.length - 1]);
+
+                String territoryPart = String.join(" ", Arrays.copyOf(subParts, subParts.length - 1));
+                int sepIndex = territoryPart.lastIndexOf(' ');
+
+                if (sepIndex == -1) {
+                    sendMessage("ERROR Geçersiz komut formatı (from to troops)");
+                    break;
+                }
+
+                String from = territoryPart.substring(0, sepIndex);
+                String to = territoryPart.substring(sepIndex + 1);
+
                 riskMatch.handleFortify(playerId, from, to, troops);
             } catch (Exception e) {
-                sendMessage("ERROR Geçersiz komut formatı");
+                sendMessage("ERROR Güçlendirme ayrıştırılamadı");
             }
             break;
+
             case "RESTART_DECLINE":
                 riskMatch.handleRestartDecline(playerId);  // 🔹 yeni metot
                 break;

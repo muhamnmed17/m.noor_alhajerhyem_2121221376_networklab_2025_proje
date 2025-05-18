@@ -13,6 +13,8 @@ public class RiskGame {
     private Map<String, String> territoryToContinentMap = new HashMap<>();  // Bölge-kıta ilişkisi
     private Map<String, List<String>> continentTerritories = new HashMap<>();  // Kıta-bölgeler ilişkisi
     private Map<String, Integer> continentBonus = new HashMap<>();  // Kıta bonusları
+private ClientHandler player1;
+private ClientHandler player2;
 
     private Map<Integer, Integer> playerTroopsToPlace = new HashMap<>();
     private static final int INITIAL_TROOPS = 20;  // Her oyuncunun başlangıçta alacağı asker sayısı
@@ -22,83 +24,136 @@ public class RiskGame {
     /**
      * Oyunu başlatır ve başlangıç durumunu ayarlar
      */
-    public void initializeGame(int playerId1, int playerId2) {
-        createTerritories();
-        defineAdjacencies();
-        defineContinents();
-        distributeTerritories(playerId1, playerId2);
+public void initializeGame(ClientHandler player1, ClientHandler player2) {
+    this.player1 = player1;
+    this.player2 = player2;
+    createTerritories();
+    defineAdjacencies();
+    defineContinents();
+    distributeTerritories(player1.getPlayerId(), player2.getPlayerId());
+    playerTroopsToPlace.put(player1.getPlayerId(), INITIAL_TROOPS);
+    playerTroopsToPlace.put(player2.getPlayerId(), INITIAL_TROOPS);
+}
 
-        playerTroopsToPlace.put(playerId1, INITIAL_TROOPS);
-        playerTroopsToPlace.put(playerId2, INITIAL_TROOPS);
+
+private int getOwnedTerritoryCount(int playerId) {
+    int count = 0;
+    for (Territory t : territories.values()) {
+        if (t.getOwner() == playerId) count++;
     }
+    return count;
+}
 
     /**
      * Bölgeleri oluşturur
      */
     private void createTerritories() {
+        // Kuzey Amerika
+        territories.put("Alaska", new Territory("Alaska", -1, 0));
+        territories.put("Kuzeybatı Toprakları", new Territory("Kuzeybatı Toprakları", -1, 0));
+        territories.put("Grönland", new Territory("Grönland", -1, 0));
+        territories.put("Alberta", new Territory("Alberta", -1, 0));
+        territories.put("Ontario", new Territory("Ontario", -1, 0));
+        territories.put("Quebec", new Territory("Quebec", -1, 0));
+        territories.put("Batı ABD", new Territory("Batı ABD", -1, 0));
+        territories.put("Doğu ABD", new Territory("Doğu ABD", -1, 0));
+        territories.put("Orta Amerika", new Territory("Orta Amerika", -1, 0));
+
+        // Güney Amerika
+        territories.put("Venezuela", new Territory("Venezuela", -1, 0));
+        territories.put("Peru", new Territory("Peru", -1, 0));
+        territories.put("Brezilya", new Territory("Brezilya", -1, 0));
+        territories.put("Arjantin", new Territory("Arjantin", -1, 0));
+
         // Avrupa
-        territories.put("Türkiye", new Territory("Türkiye", -1, 0));
-        territories.put("Almanya", new Territory("Almanya", -1, 0));
-        territories.put("Fransa", new Territory("Fransa", -1, 0));
+        territories.put("İzlanda", new Territory("İzlanda", -1, 0));
+        territories.put("Britanya", new Territory("Britanya", -1, 0));
+        territories.put("İskandinavya", new Territory("İskandinavya", -1, 0));
+        territories.put("Batı Avrupa", new Territory("Batı Avrupa", -1, 0));
+        territories.put("Güney Avrupa", new Territory("Güney Avrupa", -1, 0));
+        territories.put("Kuzey Avrupa", new Territory("Kuzey Avrupa", -1, 0));
+        territories.put("Ukrayna", new Territory("Ukrayna", -1, 0));
 
         // Afrika
+        territories.put("Kuzey Afrika", new Territory("Kuzey Afrika", -1, 0));
         territories.put("Mısır", new Territory("Mısır", -1, 0));
-        territories.put("Fas", new Territory("Fas", -1, 0));
+        territories.put("Doğu Afrika", new Territory("Doğu Afrika", -1, 0));
+        territories.put("Kongo", new Territory("Kongo", -1, 0));
+        territories.put("Güney Afrika", new Territory("Güney Afrika", -1, 0));
+        territories.put("Madagaskar", new Territory("Madagaskar", -1, 0));
 
         // Asya
+        territories.put("Ural", new Territory("Ural", -1, 0));
+        territories.put("Sibirya", new Territory("Sibirya", -1, 0));
+        territories.put("Yakutsk", new Territory("Yakutsk", -1, 0));
+        territories.put("Kamçatka", new Territory("Kamçatka", -1, 0));
+        territories.put("Irkutsk", new Territory("Irkutsk", -1, 0));
+        territories.put("Moğolistan", new Territory("Moğolistan", -1, 0));
+        territories.put("Japonya", new Territory("Japonya", -1, 0));
         territories.put("Çin", new Territory("Çin", -1, 0));
         territories.put("Hindistan", new Territory("Hindistan", -1, 0));
-        territories.put("Japonya", new Territory("Japonya", -1, 0));
+        territories.put("Afganistan", new Territory("Afganistan", -1, 0));
+        territories.put("Orta Doğu", new Territory("Orta Doğu", -1, 0));
+        territories.put("Güneydoğu Asya", new Territory("Güneydoğu Asya", -1, 0));
 
-        // Avrupa
-        territories.put("Ukrayna", new Territory("Ukrayna", -1, 0));
-        territories.put("İsveç", new Territory("İsveç", -1, 0));
-        territories.put("İtalya", new Territory("İtalya", -1, 0));
-
-// Asya
-        territories.put("Rusya", new Territory("Rusya", -1, 0));
-        territories.put("Güney Kore", new Territory("Güney Kore", -1, 0));
-        territories.put("Suudi Arabistan", new Territory("Suudi Arabistan", -1, 0));
-
+        // Avustralya
+        territories.put("Endonezya", new Territory("Endonezya", -1, 0));
+        territories.put("Yeni Gine", new Territory("Yeni Gine", -1, 0));
+        territories.put("Batı Avustralya", new Territory("Batı Avustralya", -1, 0));
+        territories.put("Doğu Avustralya", new Territory("Doğu Avustralya", -1, 0));
     }
 
     /**
      * Komşuluk ilişkilerini tanımlar
      */
     private void defineAdjacencies() {
-        // Türkiye'nin komşuları
-        adjacencyMap.put("Türkiye", Arrays.asList("Almanya", "Fransa", "Mısır", "Hindistan", "Ukrayna", "İtalya", "Suudi Arabistan"));
+        adjacencyMap.put("Alaska", Arrays.asList("Kamçatka", "Kuzeybatı Toprakları", "Alberta"));
+        adjacencyMap.put("Kuzeybatı Toprakları", Arrays.asList("Alaska", "Alberta", "Ontario", "Grönland"));
+        adjacencyMap.put("Grönland", Arrays.asList("İzlanda", "Quebec", "Ontario", "Kuzeybatı Toprakları"));
+        adjacencyMap.put("Alberta", Arrays.asList("Alaska", "Kuzeybatı Toprakları", "Ontario", "Batı ABD"));
+        adjacencyMap.put("Ontario", Arrays.asList("Grönland", "Quebec", "Batı ABD", "Doğu ABD", "Alberta", "Kuzeybatı Toprakları"));
+        adjacencyMap.put("Quebec", Arrays.asList("Grönland", "Doğu ABD", "Ontario"));
+        adjacencyMap.put("Batı ABD", Arrays.asList("Alberta", "Ontario", "Doğu ABD", "Orta Amerika"));
+        adjacencyMap.put("Doğu ABD", Arrays.asList("Quebec", "Ontario", "Batı ABD", "Orta Amerika"));
+        adjacencyMap.put("Orta Amerika", Arrays.asList("Batı ABD", "Doğu ABD", "Venezuela"));
 
-        // Almanya'nın komşuları
-        adjacencyMap.put("Almanya", Arrays.asList("Türkiye", "Fransa", "Ukrayna", "İsveç"));
+        adjacencyMap.put("Venezuela", Arrays.asList("Orta Amerika", "Peru", "Brezilya"));
+        adjacencyMap.put("Peru", Arrays.asList("Venezuela", "Brezilya", "Arjantin"));
+        adjacencyMap.put("Brezilya", Arrays.asList("Kuzey Afrika", "Arjantin", "Venezuela", "Peru"));
+        adjacencyMap.put("Arjantin", Arrays.asList("Brezilya", "Peru"));
 
-        // Fransa'nın komşuları
-        adjacencyMap.put("Fransa", Arrays.asList("Türkiye", "Almanya", "Fas", "İtalya"));
+        adjacencyMap.put("İzlanda", Arrays.asList("Grönland", "Britanya", "İskandinavya"));
+        adjacencyMap.put("Britanya", Arrays.asList("İzlanda", "İskandinavya", "Kuzey Avrupa", "Batı Avrupa"));
+        adjacencyMap.put("İskandinavya", Arrays.asList("İzlanda", "Britanya", "Kuzey Avrupa", "Ukrayna"));
+        adjacencyMap.put("Batı Avrupa", Arrays.asList("Britanya", "Kuzey Avrupa", "Güney Avrupa", "Kuzey Afrika"));
+        adjacencyMap.put("Güney Avrupa", Arrays.asList("Batı Avrupa", "Kuzey Avrupa", "Ukrayna", "Orta Doğu", "Mısır", "Kuzey Afrika"));
+        adjacencyMap.put("Kuzey Avrupa", Arrays.asList("İskandinavya", "Britanya", "Batı Avrupa", "Güney Avrupa", "Ukrayna"));
+        adjacencyMap.put("Ukrayna", Arrays.asList("İskandinavya", "Kuzey Avrupa", "Güney Avrupa", "Orta Doğu", "Afganistan", "Ural"));
 
-        // Mısır'ın komşuları
-        adjacencyMap.put("Mısır", Arrays.asList("Fas", "Türkiye", "Suudi Arabistan"));
+        adjacencyMap.put("Kuzey Afrika", Arrays.asList("Batı Avrupa", "Güney Avrupa", "Mısır", "Brezilya", "Kongo", "Doğu Afrika"));
+        adjacencyMap.put("Mısır", Arrays.asList("Kuzey Afrika", "Güney Avrupa", "Orta Doğu", "Doğu Afrika"));
+        adjacencyMap.put("Doğu Afrika", Arrays.asList("Mısır", "Orta Doğu", "Kuzey Afrika", "Kongo", "Güney Afrika", "Madagaskar"));
+        adjacencyMap.put("Kongo", Arrays.asList("Kuzey Afrika", "Doğu Afrika", "Güney Afrika"));
+        adjacencyMap.put("Güney Afrika", Arrays.asList("Kongo", "Doğu Afrika", "Madagaskar"));
+        adjacencyMap.put("Madagaskar", Arrays.asList("Doğu Afrika", "Güney Afrika"));
 
-        // Fas'ın komşuları
-        adjacencyMap.put("Fas", Arrays.asList("Fransa", "Mısır"));
+        adjacencyMap.put("Orta Doğu", Arrays.asList("Güney Avrupa", "Ukrayna", "Afganistan", "Hindistan", "Mısır", "Doğu Afrika"));
+        adjacencyMap.put("Afganistan", Arrays.asList("Ukrayna", "Ural", "Çin", "Hindistan", "Orta Doğu"));
+        adjacencyMap.put("Ural", Arrays.asList("Ukrayna", "Afganistan", "Çin", "Sibirya"));
+        adjacencyMap.put("Sibirya", Arrays.asList("Ural", "Çin", "Moğolistan", "Irkutsk", "Yakutsk"));
+        adjacencyMap.put("Yakutsk", Arrays.asList("Sibirya", "Irkutsk", "Kamçatka"));
+        adjacencyMap.put("Kamçatka", Arrays.asList("Yakutsk", "Irkutsk", "Moğolistan", "Japonya", "Alaska"));
+        adjacencyMap.put("Irkutsk", Arrays.asList("Sibirya", "Moğolistan", "Kamçatka", "Yakutsk"));
+        adjacencyMap.put("Moğolistan", Arrays.asList("Sibirya", "Çin", "Japonya", "Kamçatka", "Irkutsk"));
+        adjacencyMap.put("Japonya", Arrays.asList("Kamçatka", "Moğolistan"));
+        adjacencyMap.put("Çin", Arrays.asList("Ural", "Afganistan", "Hindistan", "Güneydoğu Asya", "Moğolistan", "Sibirya"));
+        adjacencyMap.put("Hindistan", Arrays.asList("Orta Doğu", "Afganistan", "Çin", "Güneydoğu Asya"));
+        adjacencyMap.put("Güneydoğu Asya", Arrays.asList("Çin", "Hindistan", "Endonezya"));
 
-        // Hindistan'ın komşuları
-        adjacencyMap.put("Hindistan", Arrays.asList("Türkiye", "Çin", "Suudi Arabistan"));
-
-        // Çin'in komşuları
-        adjacencyMap.put("Çin", Arrays.asList("Hindistan", "Japonya", "Rusya", "Güney Kore"));
-
-        // Japonya'nın komşuları
-        adjacencyMap.put("Japonya", Arrays.asList("Çin", "Güney Kore"));
-
-        // Yeni Komşuluklar
-        adjacencyMap.put("Ukrayna", Arrays.asList("Türkiye", "Almanya", "Rusya"));
-        adjacencyMap.put("İsveç", Arrays.asList("Almanya", "Rusya"));
-        adjacencyMap.put("İtalya", Arrays.asList("Fransa", "Türkiye"));
-
-        adjacencyMap.put("Rusya", Arrays.asList("Ukrayna", "İsveç", "Çin"));
-        adjacencyMap.put("Güney Kore", Arrays.asList("Japonya", "Çin"));
-        adjacencyMap.put("Suudi Arabistan", Arrays.asList("Hindistan", "Mısır", "Türkiye"));
-
+        adjacencyMap.put("Endonezya", Arrays.asList("Güneydoğu Asya", "Batı Avustralya", "Yeni Gine"));
+        adjacencyMap.put("Batı Avustralya", Arrays.asList("Endonezya", "Doğu Avustralya", "Yeni Gine"));
+        adjacencyMap.put("Doğu Avustralya", Arrays.asList("Batı Avustralya", "Yeni Gine"));
+        adjacencyMap.put("Yeni Gine", Arrays.asList("Endonezya", "Batı Avustralya", "Doğu Avustralya"));
     }
 
     /**
@@ -106,32 +161,55 @@ public class RiskGame {
      */
     private void defineContinents() {
         // Kıtalar ve içerdiği bölgeler
-        continentTerritories.put("Avrupa", Arrays.asList("Türkiye", "Almanya", "Fransa", "Ukrayna", "İsveç", "İtalya"));
-        continentTerritories.put("Afrika", Arrays.asList("Mısır", "Fas"));
-        continentTerritories.put("Asya", Arrays.asList("Çin", "Hindistan", "Japonya", "Rusya", "Güney Kore", "Suudi Arabistan"));
+        continentTerritories.put("Kuzey Amerika", Arrays.asList(
+                "Alaska", "Kuzeybatı Toprakları", "Alberta", "Ontario", "Quebec",
+                "Grönland", "Batı ABD", "Doğu ABD", "Orta Amerika"
+        ));
+
+        continentTerritories.put("Güney Amerika", Arrays.asList(
+                "Venezuela", "Peru", "Brezilya", "Arjantin"
+        ));
+
+        continentTerritories.put("Avrupa", Arrays.asList(
+                "İzlanda", "Britanya", "İskandinavya", "Batı Avrupa",
+                "Kuzey Avrupa", "Güney Avrupa", "Ukrayna"
+        ));
+
+        continentTerritories.put("Afrika", Arrays.asList(
+                "Kuzey Afrika", "Mısır", "Doğu Afrika",
+                "Kongo", "Güney Afrika", "Madagaskar"
+        ));
+
+        continentTerritories.put("Asya", Arrays.asList(
+                "Ural", "Sibirya", "Yakutsk", "Kamçatka", "Irkutsk",
+                "Moğolistan", "Japonya", "Çin", "Hindistan",
+                "Afganistan", "Orta Doğu", "Güneydoğu Asya"
+        ));
+
+        continentTerritories.put("Avustralya", Arrays.asList(
+                "Endonezya", "Yeni Gine", "Batı Avustralya", "Doğu Avustralya"
+        ));
 
         // Bölgelerin hangi kıtada olduğu
-        territoryToContinentMap.put("Türkiye", "Avrupa");
-        territoryToContinentMap.put("Almanya", "Avrupa");
-        territoryToContinentMap.put("Fransa", "Avrupa");
-        territoryToContinentMap.put("Mısır", "Afrika");
-        territoryToContinentMap.put("Fas", "Afrika");
-        territoryToContinentMap.put("Çin", "Asya");
-        territoryToContinentMap.put("Hindistan", "Asya");
-        territoryToContinentMap.put("Japonya", "Asya");
-        territoryToContinentMap.put("Ukrayna", "Avrupa");
-        territoryToContinentMap.put("İsveç", "Avrupa");
-        territoryToContinentMap.put("İtalya", "Avrupa");
-
-        territoryToContinentMap.put("Rusya", "Asya");
-        territoryToContinentMap.put("Güney Kore", "Asya");
-        territoryToContinentMap.put("Suudi Arabistan", "Asya");
+        for (Map.Entry<String, List<String>> entry : continentTerritories.entrySet()) {
+            String continent = entry.getKey();
+            for (String territory : entry.getValue()) {
+                territoryToContinentMap.put(territory, continent);
+            }
+        }
 
         // Kıta bonusları
-        continentBonus.put("Avrupa", 3);  // Avrupa'nın tüm bölgelerine sahip olan 3 asker bonus alır
-        continentBonus.put("Afrika", 2);  // Afrika'nın tüm bölgelerine sahip olan 2 asker bonus alır
-        continentBonus.put("Asya", 4);    // Asya'nın tüm bölgelerine sahip olan 4 asker bonus alır
+        continentBonus.put("Kuzey Amerika", 5);
+        continentBonus.put("Güney Amerika", 2);
+        continentBonus.put("Avrupa", 5);
+        continentBonus.put("Afrika", 3);
+        continentBonus.put("Asya", 7);
+        continentBonus.put("Avustralya", 2);
     }
+
+    
+
+   
 
     /**
      * Bölgeleri rastgele dağıtır
@@ -361,6 +439,10 @@ public class RiskGame {
     public int getTerritoryTroops(String territoryName) {
         Territory t = territories.get(territoryName);
         return (t != null) ? t.getTroops() : 0;
+    }
+
+    public Map<String, Territory> getTerritories() {
+        return territories;
     }
 
     public void calculateTroopsFor(int playerId) {

@@ -11,6 +11,7 @@ import java.util.concurrent.*;
 public class RiskServer {
 
     private static final int PORT = 9090;
+    private int roomCounter = 1;
 
     private ServerSocket serverSocket;
     private final List<ClientHandler> allClients = new ArrayList<>();
@@ -38,10 +39,10 @@ public class RiskServer {
                     ClientHandler p1 = waitingClients.remove(0);
                     ClientHandler p2 = waitingClients.remove(0);
 
-                    System.out.println("Yeni eşleşme oluşturuluyor: Oyuncular " +
-                            p1.getPlayerId() + " ve " + p2.getPlayerId());
+                    System.out.println("Yeni eşleşme oluşturuluyor: Oyuncular "
+                            + p1.getPlayerId() + " ve " + p2.getPlayerId());
 
-                    RiskMatch match = new RiskMatch(nextRoomId++, p1, p2);
+                    RiskMatch match = new RiskMatch(nextRoomId++, p1, p2, this);
                     match.start();
                 }
             }
@@ -63,6 +64,24 @@ public class RiskServer {
             // NOT: Bu sistem artık RiskMatch içinde yapılmalı!
             restartRequests.clear();
         }
+    }
+
+    public synchronized void addToWaiting(ClientHandler client) {
+        waitingClients.add(client);
+        System.out.println("Oyuncu yeniden bekleme listesine alındı: " + client);
+
+        if (waitingClients.size() >= 2) {
+            ClientHandler p1 = waitingClients.remove(0);
+            ClientHandler p2 = waitingClients.remove(0);
+            RiskMatch newMatch = new RiskMatch(roomCounter++, p1, p2, this);
+            newMatch.start();
+        }
+    }
+
+    public synchronized void removeClient(ClientHandler client) {
+        waitingClients.remove(client);
+        allClients.remove(client);
+        System.out.println("İstemci temizlendi: " + client);
     }
 
     public static void main(String[] args) {
