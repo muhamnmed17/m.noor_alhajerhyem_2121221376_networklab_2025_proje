@@ -26,7 +26,7 @@ private ClientHandler getPlayerById(int id) {
     this.roomId = roomId;
     this.player1 = p1;
     this.player2 = p2;
-    this.server = server; // 🔴 eksik olan kısım
+    this.server = server; 
     this.game = new RiskGame();
 
     p1.setRiskMatch(this);
