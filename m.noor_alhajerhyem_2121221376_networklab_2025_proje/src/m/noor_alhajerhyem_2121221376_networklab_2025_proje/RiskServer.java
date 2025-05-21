@@ -1,91 +1,167 @@
-package final_project;
+package final_project; 
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.*;                    
+import java.net.*;                   
+import java.util.*;                   
+import java.util.concurrent.*;        
 
 /**
  * Çok oyunculu Risk sunucusu – eşli eşleşmeli yapı
  */
 public class RiskServer {
 
-    private static final int PORT = 9090;
-    private int roomCounter = 1;
+    private static final int PORT = 9090; // Sunucunun dinleyeceği port
+    private int nextRoomId = 1;           // Oda ID sayacı
 
-    private ServerSocket serverSocket;
-    private final List<ClientHandler> allClients = new ArrayList<>();
-    private final List<ClientHandler> waitingClients = new ArrayList<>();
-    private final Set<Integer> restartRequests = new HashSet<>();
-    private final ExecutorService threadPool = Executors.newCachedThreadPool();
-
-    private int nextRoomId = 1;
+    private ServerSocket serverSocket;                // Sunucu soketi
+    private final List<ClientHandler> allClients = new ArrayList<>();    // Bağlı tüm istemciler
+    private final List<ClientHandler> waitingClients = new ArrayList<>(); // Eşleşmeyi bekleyen oyuncular
+    private final ExecutorService threadPool = Executors.newCachedThreadPool(); // Thread havuzu
+    private boolean running = true;       // Sunucunun çalışıp çalışmadığını belirler
+    private PairingThread pairingThread;  // Eşleştirme işlemlerini yürüten thread
 
     public void start() {
         try {
-            serverSocket = new ServerSocket(PORT);
+            serverSocket = new ServerSocket(PORT); // Belirtilen portta sunucu başlatılır
             System.out.println("Risk sunucusu başlatıldı. Port: " + PORT);
+            
+            pairingThread = new PairingThread(this); // Eşleştirme thread’i oluştur
+            pairingThread.start();                   // Eşleştirme başlat
 
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Yeni istemci bağlandı: " + clientSocket.getInetAddress());
-
-                ClientHandler handler = new ClientHandler(clientSocket, allClients.size(), this);
-                allClients.add(handler);
-                waitingClients.add(handler);
-                threadPool.execute(handler);
-
-                if (waitingClients.size() >= 2) {
-                    ClientHandler p1 = waitingClients.remove(0);
-                    ClientHandler p2 = waitingClients.remove(0);
-
-                    System.out.println("Yeni eşleşme oluşturuluyor: Oyuncular "
-                            + p1.getPlayerId() + " ve " + p2.getPlayerId());
-
-                    RiskMatch match = new RiskMatch(nextRoomId++, p1, p2, this);
-                    match.start();
+            while (running) { // Sunucu çalıştığı sürece bağlantı bekle
+                try {
+                    Socket clientSocket = serverSocket.accept(); // Yeni istemci bağlantısı bekleniyor
+                    handleNewConnection(clientSocket);           // Yeni bağlantıyı işle
+                } catch (SocketException e) {
+                    if (!running) break; // Sunucu kapanmışsa döngü sonlanır
+                    System.err.println("Bağlantı hatası: " + e.getMessage());
                 }
             }
-
         } catch (IOException e) {
             System.err.println("Sunucu hatası: " + e.getMessage());
+        } finally {
+            shutdownServer(); // Her durumda sunucuyu düzgün şekilde kapat
         }
     }
 
     /**
-     * (İsteğe bağlı) Tüm oyuncular onaylarsa restart logic buraya taşınabilir
+     * Yeni bir bağlantıyı yönetir
      */
-    public synchronized void handleRestartRequest(int playerId) {
-        restartRequests.add(playerId);
-        System.out.println("Oyuncu " + playerId + " yeniden başlatmak istiyor.");
+    private void handleNewConnection(Socket clientSocket) {
+        try {
+            System.out.println("Yeni istemci bağlandı: " + clientSocket.getInetAddress());
+            ClientHandler handler = new ClientHandler(clientSocket, allClients.size(), this); // Yeni handler oluştur
 
-        if (restartRequests.size() % 2 == 0) {
-            System.out.println("2 oyuncudan restart geldi. İlgili RiskMatch üzerinden yeniden başlatılmalı.");
-            // NOT: Bu sistem artık RiskMatch içinde yapılmalı!
-            restartRequests.clear();
+            synchronized (allClients) {
+                allClients.add(handler); // Tüm istemci listesine ekle
+            }
+
+            synchronized (waitingClients) {
+                waitingClients.add(handler); // Eşleşme bekleyen listesine ekle
+            }
+
+            threadPool.execute(handler); // Handler'ı thread havuzuna ver
+
+        } catch (Exception e) {
+            System.err.println("Bağlantı işlenirken hata: " + e.getMessage());
+            try {
+                clientSocket.close(); // Hata durumunda bağlantıyı kapat
+            } catch (IOException closeError) {
+                System.err.println("Socket kapatılamadı: " + closeError.getMessage());
+            }
         }
     }
 
+    /**
+     * Oyuncuyu bekleme listesine ekler
+     */
     public synchronized void addToWaiting(ClientHandler client) {
-        waitingClients.add(client);
-        System.out.println("Oyuncu yeniden bekleme listesine alındı: " + client);
-
-        if (waitingClients.size() >= 2) {
-            ClientHandler p1 = waitingClients.remove(0);
-            ClientHandler p2 = waitingClients.remove(0);
-            RiskMatch newMatch = new RiskMatch(roomCounter++, p1, p2, this);
-            newMatch.start();
+        synchronized (waitingClients) {
+            if (!waitingClients.contains(client)) {
+                waitingClients.add(client);
+                System.out.println("Oyuncu bekleme listesine eklendi: " + client.getPlayerId());
+            }
         }
     }
 
+    /**
+     * İstemciyi tüm listelerden kaldırır
+     */
     public synchronized void removeClient(ClientHandler client) {
-        waitingClients.remove(client);
-        allClients.remove(client);
-        System.out.println("İstemci temizlendi: " + client);
+        synchronized (waitingClients) {
+            waitingClients.remove(client); // Bekleme listesinden çıkar
+        }
+        synchronized (allClients) {
+            allClients.remove(client);    // Tüm istemciler listesinden çıkar
+        }
+        System.out.println("İstemci temizlendi: Oyuncu " + client.getPlayerId());
+    }
+
+    /**
+     * Bekleyen istemciler listesine referans döndürür
+     */
+    public List<ClientHandler> getWaitingClients() {
+        return waitingClients; // Eşleşmeyi bekleyen istemciler
+    }
+
+    /**
+     * Sonraki oda ID'sini alır ve sayacı arttırır
+     */
+    public synchronized int getNextRoomId() {
+        return nextRoomId++; // Yeni oda numarası döndür ve sayacı arttır
+    }
+
+    /**
+     * Sunucuyu kapatır
+     */
+    public void shutdownServer() {
+        running = false; // Ana döngüyü durdur
+
+        if (pairingThread != null) {
+            pairingThread.stopPairing(); // Eşleştirme thread’ini durdur
+        }
+
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            try {
+                serverSocket.close(); // Sunucu soketini kapat
+            } catch (IOException e) {
+                System.err.println("ServerSocket kapatılamadı: " + e.getMessage());
+            }
+        }
+
+        synchronized (allClients) {
+            for (ClientHandler client : allClients) {
+                try {
+                    client.sendMessage(new Message("DISCONNECT", Map.of("msg", "Sunucu kapatılıyor."))); // Kapatma bildirimi
+                    client.close(); // Bağlantıyı kapat
+                } catch (IOException e) {
+                    System.err.println("İstemci kapatılamadı: " + e.getMessage());
+                }
+            }
+            allClients.clear(); // Listeyi temizle
+        }
+
+        threadPool.shutdown(); // Thread havuzunu durdur
+        try {
+            if (!threadPool.awaitTermination(5, TimeUnit.SECONDS)) {
+                threadPool.shutdownNow(); // Zorla durdur
+            }
+        } catch (InterruptedException e) {
+            threadPool.shutdownNow(); // Hata durumunda yine zorla durdur
+        }
+
+        System.out.println("Risk sunucusu kapatıldı.");
     }
 
     public static void main(String[] args) {
-        RiskServer server = new RiskServer();
-        server.start();
+        RiskServer server = new RiskServer(); // Sunucu nesnesi oluştur
+
+        // Program kapatılırken çalışacak hook ekle (örn. Ctrl+C)
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Kapatma sinyali alındı. Sunucu kapatılıyor...");
+            server.shutdownServer();
+        }));
+
+        server.start(); // Sunucuyu başlat
     }
 }

@@ -1,23 +1,24 @@
-package final_project;
+package final_project; 
 
 /**
  * Risk oyununda bir bölgeyi temsil eden sınıf
  */
 public class Territory {
-    private String name;
-    private int owner;
-    private int troops;
+
+    private String name; // Bölgenin adı
+    private int owner;   // Bölgenin sahibi (oyuncu ID'si) (-1 = sahipsiz)
+    private int troops;  // Bölgedeki asker sayısı
 
     /**
-     * Yeni bir bölge oluşturur
-     * @param name Bölge adı
-     * @param owner Bölge sahibi (-1 = sahipsiz)
-     * @param troops Bölgedeki asker sayısı
+     * Yeni bir bölge nesnesi oluşturur
+     * name Bölge adı
+     *  owner Bölge sahibi (-1 = sahipsiz)
+     *  troops Bölgedeki asker sayısı
      */
     public Territory(String name, int owner, int troops) {
-        this.name = name;
-        this.owner = owner;
-        this.troops = troops;
+        this.name = name;       // Adı atar
+        this.owner = owner;     // Sahibini atar
+        this.troops = troops;   // Asker sayısını atar
     }
 
     /**
@@ -25,7 +26,7 @@ public class Territory {
      * @return Bölge adı
      */
     public String getName() {
-        return name;
+        return name; // name alanını döndür
     }
 
     /**
@@ -33,7 +34,7 @@ public class Territory {
      * @return Oyuncu kimliği (-1 = sahipsiz)
      */
     public int getOwner() {
-        return owner;
+        return owner; // owner alanını döndür
     }
 
     /**
@@ -41,43 +42,43 @@ public class Territory {
      * @return Asker sayısı
      */
     public int getTroops() {
-        return troops;
+        return troops; // troops alanını döndür
     }
 
     /**
      * Bölgeye yeni bir sahip atar
-     * @param owner Yeni sahip kimliği
+     *  owner Yeni sahip kimliği
      */
     public void setOwner(int owner) {
-        this.owner = owner;
+        this.owner = owner; // owner alanını güncelle
     }
 
     /**
      * Bölgedeki asker sayısını ayarlar
-     * @param troops Yeni asker sayısı
+     *  troops Yeni asker sayısı
      */
     public void setTroops(int troops) {
-        this.troops = troops;
+        this.troops = troops; // troops alanını güncelle
     }
 
     /**
      * Bölgeye asker ekler
-     * @param amount Eklenecek asker sayısı
+     *  amount Eklenecek asker sayısı
      */
     public void addTroops(int amount) {
-        this.troops += amount;
+        this.troops += amount; // asker sayısını artır
     }
 
     /**
      * Bölgeden asker çıkarır (saldırı kaybı gibi durumlarda)
-     * @param amount Çıkarılacak asker sayısı
+     *  amount Çıkarılacak asker sayısı
      */
     public void removeTroops(int amount) {
-        this.troops = Math.max(0, this.troops - amount);
+        this.troops = Math.max(0, this.troops - amount); // negatif olmaması için 0 ile sınırla
     }
 
     @Override
     public String toString() {
-        return name + ":" + owner + ":" + troops;
+        return name + ":" + owner + ":" + troops; // bölgeyi string olarak ifade eder
     }
 }
