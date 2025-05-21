@@ -48,7 +48,9 @@ public class RiskClient extends JFrame {
                 : new Color(30, 144, 255); // Mavi
     }
     private static final Color SELECTED_COLOR = new Color(255, 215, 0, 200);
-    private static final Color TARGET_COLOR = new Color(50, 205, 50, 200);
+    private static final Color FRIENDLY_TARGET_COLOR = new Color(50, 205, 50, 200); // Yeşil - kendi bölgelerimize komşu
+    private static final Color ENEMY_TARGET_COLOR = new Color(255, 99, 71, 200); // Kırmızımsı - rakip bölgelere komşu
+    private static final Color TARGET_COLOR = new Color(50, 205, 50, 200); // Eski renk, uyumluluk için tutuldu
 
     private Map<String, Territory> territories = new HashMap<>();
     private Map<Integer, Integer> playerTroopsToPlace = new HashMap<>();
@@ -143,6 +145,47 @@ public class RiskClient extends JFrame {
         infoPanel.add(Box.createVerticalStrut(5));
         infoPanel.add(troopsLeftLabel);
         infoPanel.add(playerColorLabel);
+        
+        // Renk bilgisi paneli
+        JPanel colorInfoPanel = new JPanel();
+        colorInfoPanel.setLayout(new BoxLayout(colorInfoPanel, BoxLayout.Y_AXIS));
+        colorInfoPanel.setBorder(BorderFactory.createTitledBorder("Renk Bilgisi"));
+        
+        // Yeşil renk (kendi bölgelerimize komşu)
+        JPanel friendlyColorPanel = new JPanel(new BorderLayout());
+        JPanel friendlyColorBox = new JPanel();
+        friendlyColorBox.setBackground(FRIENDLY_TARGET_COLOR);
+        friendlyColorBox.setPreferredSize(new Dimension(20, 20));
+        friendlyColorBox.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        JLabel friendlyLabel = new JLabel(" Kendi bölgelerinize komşu");
+        friendlyColorPanel.add(friendlyColorBox, BorderLayout.WEST);
+        friendlyColorPanel.add(friendlyLabel, BorderLayout.CENTER);
+        
+        // Kırmızımsı renk (rakip bölgelere komşu)
+        JPanel enemyColorPanel = new JPanel(new BorderLayout());
+        JPanel enemyColorBox = new JPanel();
+        enemyColorBox.setBackground(ENEMY_TARGET_COLOR);
+        enemyColorBox.setPreferredSize(new Dimension(20, 20));
+        enemyColorBox.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        JLabel enemyLabel = new JLabel(" Rakip bölgelere komşu");
+        enemyColorPanel.add(enemyColorBox, BorderLayout.WEST);
+        enemyColorPanel.add(enemyLabel, BorderLayout.CENTER);
+        
+        // Sarı renk (seçili bölge)
+        JPanel selectedColorPanel = new JPanel(new BorderLayout());
+        JPanel selectedColorBox = new JPanel();
+        selectedColorBox.setBackground(SELECTED_COLOR);
+        selectedColorBox.setPreferredSize(new Dimension(20, 20));
+        selectedColorBox.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        JLabel selectedLabel = new JLabel(" Seçili bölge");
+        selectedColorPanel.add(selectedColorBox, BorderLayout.WEST);
+        selectedColorPanel.add(selectedLabel, BorderLayout.CENTER);
+        
+        colorInfoPanel.add(friendlyColorPanel);
+        colorInfoPanel.add(Box.createVerticalStrut(5));
+        colorInfoPanel.add(enemyColorPanel);
+        colorInfoPanel.add(Box.createVerticalStrut(5));
+        colorInfoPanel.add(selectedColorPanel);
 
         // Buton paneli
         JPanel buttonPanel = new JPanel();
@@ -228,17 +271,13 @@ public class RiskClient extends JFrame {
      * Oyuncunun sırasını bitirir
      */
     private void endTurn() {
-        sendCommand("END_TURN");
-        sendCommand("END_TURN");
-        logToGameConsole("Turu bitirdiniz.");
-        statusLabel.setText("Turu bitirdiniz. Rakip bekleniyor...");
-        enableButtons(false);
-        selectedTerritory = null;
-        targetTerritory = null;
-        attackMode = false;
-        fortifyMode = false;
-        mapPanel.repaint();
-    }
+    sendCommand("END_TURN");
+    logToGameConsole("Turu bitirdiniz.");
+    statusLabel.setText("Turu bitirdiniz. Rakip bekleniyor...");
+    enableButtons(false);
+    removeHighlights();
+    mapPanel.repaint();
+}
 
     /**
      * Asker yerleştirme modunu başlatır
@@ -701,7 +740,28 @@ public class RiskClient extends JFrame {
             g2d.setColor(SELECTED_COLOR);
             g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
         } else if (isTarget) {
-            g2d.setColor(TARGET_COLOR);
+            // Seçilen bölgenin sahibine göre komşu bölgeleri farklı renklerde göster
+            Territory selectedT = selectedTerritory != null ? territories.get(selectedTerritory) : null;
+            if (selectedT != null) {
+                // Seçilen bölge bizimse ve komşu bölge de bizimse yeşil, değilse kırmızımsı
+                if (selectedT.getOwner() == playerId) {
+                    // Komşu bölgenin sahibine göre renk belirle
+                    if (t.getOwner() == playerId) {
+                        g2d.setColor(FRIENDLY_TARGET_COLOR); // Kendi bölgemize komşu olan kendi bölgemiz
+                    } else {
+                        g2d.setColor(ENEMY_TARGET_COLOR); // Kendi bölgemize komşu olan rakip bölge
+                    }
+                } else {
+                    // Seçilen bölge rakibinse ve komşu bölge bizimse yeşil, değilse kırmızımsı
+                    if (t.getOwner() == playerId) {
+                        g2d.setColor(FRIENDLY_TARGET_COLOR); // Rakip bölgeye komşu olan kendi bölgemiz
+                    } else {
+                        g2d.setColor(ENEMY_TARGET_COLOR); // Rakip bölgeye komşu olan rakip bölge
+                    }
+                }
+            } else {
+                g2d.setColor(TARGET_COLOR); // Seçili bölge yoksa eski rengi kullan
+            }
             g2d.fillOval(scaledX - radius, scaledY - radius, radius * 2, radius * 2);
         }
 
@@ -787,10 +847,7 @@ public class RiskClient extends JFrame {
     }
 
     private void clearSelectionAndModes() {
-        selectedTerritory = null;
-        targetTerritory = null;
-        attackMode = false;
-        fortifyMode = false;
+        removeHighlights();
         statusLabel.setText("Seçim temizlendi.");
         logToGameConsole("Seçimler sıfırlandı.");
         mapPanel.repaint();
@@ -883,25 +940,41 @@ public class RiskClient extends JFrame {
         logToGameConsole("Komşuluk verileri güncellendi.");
     }
 
-    private void startListening() {
-        executor.submit(() -> {
-            try {
-                String msg;
-                while ((msg = in.readLine()) != null) {
-                    final String message = msg;
-                    SwingUtilities.invokeLater(() -> processMessage(message));
-                }
-            } catch (IOException e) {
-                SwingUtilities.invokeLater(() -> {
-                    logToGameConsole("Sunucu bağlantısı koptu: " + e.getMessage());
-                    JOptionPane.showMessageDialog(this, "Sunucu ile bağlantı kesildi.",
-                            "Bağlantı Hatası", JOptionPane.ERROR_MESSAGE);
-                    cleanup();
-                    System.exit(1);
-                });
+private void startListening() {
+    executor.submit(() -> {
+        try {
+            String msg;
+            while ((msg = in.readLine()) != null) {
+                final String message = msg;
+                SwingUtilities.invokeLater(() -> processMessage(message));
             }
-        });
-    }
+        } catch (SocketException e) {
+            SwingUtilities.invokeLater(() -> {
+                logToGameConsole("Sunucu ile bağlantı kesildi: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Sunucu ile bağlantı kesildi. Oyun kapatılacak.",
+                        "Bağlantı Hatası", JOptionPane.ERROR_MESSAGE);
+                cleanup();
+                System.exit(1);
+            });
+        } catch (IOException e) {
+            SwingUtilities.invokeLater(() -> {
+                logToGameConsole("Sunucu ile iletişim hatası: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Sunucu ile iletişim kesildi: " + e.getMessage(),
+                        "Bağlantı Hatası", JOptionPane.ERROR_MESSAGE);
+                cleanup();
+                System.exit(1);
+            });
+        } catch (Exception e) {
+            SwingUtilities.invokeLater(() -> {
+                logToGameConsole("Beklenmeyen hata: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Beklenmeyen bir hata oluştu: " + e.getMessage(),
+                        "Hata", JOptionPane.ERROR_MESSAGE);
+                cleanup();
+                System.exit(1);
+            });
+        }
+    });
+}
 
     private void processMessage(String message) {
         logToGameConsole("Alındı: " + message);
@@ -1037,10 +1110,7 @@ public class RiskClient extends JFrame {
 
         currentTurn = turn;
         // Seçimleri sıfırla
-        selectedTerritory = null;
-        targetTerritory = null;
-        attackMode = false;
-        fortifyMode = false;
+        removeHighlights();
         mapPanel.repaint();
         playerTroopsToPlace.put(turn, troops);
 
@@ -1107,8 +1177,7 @@ public class RiskClient extends JFrame {
             logToGameConsole(to + " ele geçirildi!");
         }
 
-        selectedTerritory = null;
-        targetTerritory = null;
+        removeHighlights();
         mapPanel.repaint();
     }
 
@@ -1127,15 +1196,13 @@ public class RiskClient extends JFrame {
             dst.addTroops(moved);
         }
 
-        selectedTerritory = null;
-        targetTerritory = null;
+        removeHighlights();
         mapPanel.repaint();
     }
 
     private void handleGameOverCommand(String data) {
         gameOver = true;
-        selectedTerritory = null;
-        targetTerritory = null;
+        removeHighlights();
         mapPanel.repaint();
 
         try {
@@ -1179,6 +1246,17 @@ public class RiskClient extends JFrame {
         endTurnButton.setEnabled(enable && troops == 0);
     }
 
+    /**
+     * Vurgulamaları kaldırır ve seçimleri sıfırlar
+     */
+    private void removeHighlights() {
+        selectedTerritory = null;
+        targetTerritory = null;
+        attackMode = false;
+        fortifyMode = false;
+        highlightedTargets.clear();
+    }
+    
     private void cleanup() {
         try {
             if (socket != null) {
@@ -1209,9 +1287,17 @@ public class RiskClient extends JFrame {
                 ip = "127.0.0.1";
             }
 
-            String playerName = JOptionPane.showInputDialog("Oyuncu adınızı girin:");
-            if (playerName == null || playerName.isBlank()) {
-                playerName = "Oyuncu";
+            String playerName = null;
+            boolean isValidName = false;
+            
+            while (!isValidName) {
+                playerName = JOptionPane.showInputDialog("Oyuncu adınızı girin:");
+                if (playerName != null && !playerName.trim().isEmpty()) {
+                    isValidName = true;
+                } else {
+                    JOptionPane.showMessageDialog(null, "Lütfen geçerli bir isim girin!", 
+                            "Hata", JOptionPane.ERROR_MESSAGE);
+                }
             }
 
             new RiskClient(ip, 9090, playerName);

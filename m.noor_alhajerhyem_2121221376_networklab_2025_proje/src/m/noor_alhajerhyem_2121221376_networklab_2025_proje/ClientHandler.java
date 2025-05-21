@@ -157,12 +157,15 @@ public class ClientHandler implements Runnable {
     /**
      * İstemciye mesaj gönderir
      */
-    public void sendMessage(String message) {
-        if (out != null && !clientSocket.isClosed()) {
+  public void sendMessage(String message) {
+    try {
+        if (out != null && clientSocket != null && !clientSocket.isClosed()) {
             out.println(message);
         }
+    } catch (Exception e) {
+        System.err.println("Mesaj gönderilirken hata: " + e.getMessage());
     }
-
+}
     public String getPlayerName() {
         return playerName;
     }
