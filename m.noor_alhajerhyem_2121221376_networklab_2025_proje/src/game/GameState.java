@@ -1,4 +1,4 @@
-package final_project; 
+package game; 
 
 import java.awt.*; 
 import java.util.*; 

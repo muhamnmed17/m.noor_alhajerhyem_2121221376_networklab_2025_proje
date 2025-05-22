@@ -1,5 +1,7 @@
-package final_project;
+package client;
 
+import game.GameState;
+import game.Territory;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;

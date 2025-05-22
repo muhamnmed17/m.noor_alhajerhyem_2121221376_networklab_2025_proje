@@ -1,5 +1,9 @@
-package final_project; // Projenin paket tanımlaması
+package client; // Projenin paket tanımlaması
 
+import game.GameState;
+import network.Message;
+import network.MessageHandler;
+import network.NetworkClient;
 import javax.swing.*; // Swing GUI bileşenleri için import
 import java.awt.*; // AWT grafik ve layout sınıfları için import
 import java.awt.event.*; // Olay yönetimi sınıfları için import

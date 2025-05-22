@@ -1,5 +1,9 @@
-package final_project; 
+package game; 
 
+import RiskServer.RiskServer;
+import game.RiskGame;
+import network.Message;
+import network.ClientHandler;
 import java.util.*;
 
 /**

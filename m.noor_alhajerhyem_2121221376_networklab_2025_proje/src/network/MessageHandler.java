@@ -1,5 +1,10 @@
-package final_project; 
+package network; 
 
+import network.Message;
+import client.GameUI;
+import client.RiskClient;
+import game.GameState;
+import game.Territory;
 import javax.swing.*; 
 import java.awt.*; 
 import java.util.*; 

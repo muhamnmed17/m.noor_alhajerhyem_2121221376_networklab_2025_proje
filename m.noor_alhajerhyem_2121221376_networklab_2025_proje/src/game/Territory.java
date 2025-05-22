@@ -1,4 +1,4 @@
-package final_project; 
+package game; 
 
 /**
  * Risk oyununda bir bölgeyi temsil eden sınıf
