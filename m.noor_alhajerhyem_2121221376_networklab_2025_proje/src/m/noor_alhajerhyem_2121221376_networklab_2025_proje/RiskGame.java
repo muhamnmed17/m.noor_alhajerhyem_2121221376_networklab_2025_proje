@@ -245,7 +245,7 @@ private int getOwnedTerritoryCount(int playerId) {
     /**
      * Bir oyuncunun sahip olduğu kıtalardan gelen toplam bonusu hesaplar
      */
-    private int calculateContinentBonus(int playerId) {
+   private int calculateContinentBonus(int playerId) {
         int bonus = 0;
 
         for (String continent : continentTerritories.keySet()) {

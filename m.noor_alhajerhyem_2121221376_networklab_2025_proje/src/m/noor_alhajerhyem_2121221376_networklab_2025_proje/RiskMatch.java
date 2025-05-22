@@ -227,30 +227,22 @@ public class RiskMatch { // RiskMatch sınıfını tanımla
         return active.size(); // Aktif oyuncu sayısını döndür
     }
 
-    public void handleRestartDecline(int playerId) {
-    int otherPlayerId = (playerId == playerOrder[0]) ? playerOrder[1] : playerOrder[0];
-    ClientHandler quitter = getPlayerById(playerId);
-    ClientHandler waitingPlayer = getPlayerById(otherPlayerId);
+    public void handleRestartDecline(int playerId) { // Yeniden başlatma reddi işlemini yöneten metot
+        int otherPlayerId = (playerId == playerOrder[0]) ? playerOrder[1] : playerOrder[0]; // Diğer oyuncunun ID'sini bul
+        ClientHandler quitter = getPlayerById(playerId); // Reddeden oyuncuyu al
+        ClientHandler waitingPlayer = getPlayerById(otherPlayerId); // Bekleyen oyuncuyu al
 
-    quitter.sendMessage(new Message("EXIT", Map.of(
-        "msg", "show_popup_and_close"
-    )));
-    
-    // Burada kontrol ekleyelim: Eğer diğer oyuncu restart isteği göndermişse beklemeye alalım
-    if (restartRequests.contains(otherPlayerId)) {
-        waitingPlayer.sendMessage(new Message("INFO", Map.of(
-            "msg", "Diğer oyuncu yeniden başlatmak istemedi. Beklemeye alındınız."
+        quitter.sendMessage(new Message("EXIT", Map.of( // Reddeden oyuncuya çıkış mesajı gönder
+            "msg", "show_popup_and_close" // Çıkış mesajı
         )));
         
-        // Oyuncu beklemeye alınsın:
-        server.addToWaiting(waitingPlayer);
-    } else {
-        // Diğer oyuncu restart isteği göndermemişse, sadece bilgilendirelim
-        waitingPlayer.sendMessage(new Message("INFO", Map.of(
-            "msg", "Diğer oyuncu oyundan ayrıldı."
+        waitingPlayer.sendMessage(new Message("INFO", Map.of( // Bekleyen oyuncuya bilgi mesajı gönder
+            "msg", "Diğer oyuncu yeniden başlatmak istemedi. Beklemeye alındınız." // Bilgi mesajı
         )));
+
+        // Oyuncu beklemeye alınsın:
+        server.addToWaiting(waitingPlayer); // Bekleyen oyuncuyu bekleme listesine ekle
     }
-}
 
     public void handleDisconnect(int playerId) { // Bağlantı kopması durumunu yöneten metot
         int otherPlayerId = (playerId == playerOrder[0]) ? playerOrder[1] : playerOrder[0]; // Diğer oyuncunun ID'sini bul
