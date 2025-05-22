@@ -95,7 +95,7 @@ public void run() {
     /**
      * Bağlantı kesilince temizlik yapar
      */
- private void handleDisconnect() {
+private void handleDisconnect() {
     try {
         // Eğer oyuncu bir eşleşmede (match) ise
         if (riskMatch != null) {
@@ -123,6 +123,7 @@ public void run() {
         }
     }
 }
+
 
     /**
      * Yeni mesaj formatında gelen mesajları işler

@@ -21,10 +21,21 @@ private ClientHandler player2; // İkinci oyuncunun client handler'ı
     private static final int MIN_TROOPS_PER_TURN = 3;  // Bir turda minimum alınacak asker sayısı sabit değeri
     private boolean gameOver = false; // Oyunun bitip bitmediğini kontrol eden boolean değişken
 
-    /**
-     * Oyunu başlatır ve başlangıç durumunu ayarlar
-     */
+ 
+/**
+ * Oyunu başlatır ve başlangıç durumunu ayarlar
+ */
 public void initializeGame(ClientHandler player1, ClientHandler player2) { // Oyunu başlatan metod
+    // ✅ ÖNCE TÜM OYUN DURUMUNU TEMİZLE
+    territories.clear();                    // Eski bölge durumlarını temizle
+    adjacencyMap.clear();                   // Komşuluk haritasını temizle  
+    territoryToContinentMap.clear();        // Bölge-kıta ilişkisini temizle
+    continentTerritories.clear();           // Kıta-bölgeler ilişkisini temizle
+    continentBonus.clear();                 // Kıta bonuslarını temizle
+    playerTroopsToPlace.clear();            // Oyuncu asker sayılarını temizle
+    gameOver = false;                       // Oyun durumunu sıfırla
+    
+    // Şimdi temiz bir şekilde başlat
     this.player1 = player1; // Birinci oyuncuyu sınıf değişkenine atar
     this.player2 = player2; // İkinci oyuncuyu sınıf değişkenine atar
     createTerritories(); // Tüm bölgeleri oluşturan metodu çağırır
@@ -33,6 +44,8 @@ public void initializeGame(ClientHandler player1, ClientHandler player2) { // Oy
     distributeTerritories(player1.getPlayerId(), player2.getPlayerId()); // Bölgeleri oyuncular arasında dağıtan metodu çağırır
     playerTroopsToPlace.put(player1.getPlayerId(), INITIAL_TROOPS); // Birinci oyuncunun başlangıç asker sayısını ayarlar
     playerTroopsToPlace.put(player2.getPlayerId(), INITIAL_TROOPS); // İkinci oyuncunun başlangıç asker sayısını ayarlar
+    
+    System.out.println("✅ RiskGame tamamen temizlendi ve yeniden başlatıldı.");
 } // initializeGame metodunun sonu
 
 
@@ -207,9 +220,6 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
         continentBonus.put("Avustralya", 2); // Avustralya'nın bonus asker sayısını 2 olarak ayarlar
     } // defineContinents metodunun sonu
 
-    
-
-   
 
     /**
      * Bölgeleri rastgele dağıtır
@@ -259,8 +269,8 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
 
             if (ownsContinent) { // Eğer kıta tamamen kontrol ediliyorsa
                 bonus += continentBonus.get(continent); // Kıta bonusunu toplama ekler
-            } // if koşulunun sonu
-        } // dış for döngüsünün sonu
+            } 
+        } 
 
         return bonus; // Toplam bonusu döndürür
     } // calculateContinentBonus metodunun sonu
@@ -305,37 +315,37 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
         if (from == null || to == null) { // Eğer bölgelerden biri yoksa
             errorMessage.append("Bölge bulunamadı."); // Hata mesajı ekler
             return null; // null döndürür
-        } // if koşulunun sonu
+        } 
 
         if (from.getOwner() != playerId) { // Eğer saldıran bölge oyuncuya ait değilse
             errorMessage.append("Kaynak bölge size ait değil."); // Hata mesajı ekler
             return null; // null döndürür
-        } // if koşulunun sonu
+        } 
 
         if (to.getOwner() == playerId) { // Eğer hedef bölge de aynı oyuncuya aitse
             errorMessage.append("Kendi bölgenize saldırı yapamazsınız."); // Hata mesajı ekler
             return null; // null döndürür
-        } // if koşulunun sonu
+        } 
 
         if (!areNeighbors(fromTerritory, toTerritory)) { // Eğer bölgeler komşu değilse
             errorMessage.append("Bu bölgeler komşu değil."); // Hata mesajı ekler
             return null; // null döndürür
-        } // if koşulunun sonu
+        } 
 
         if (from.getTroops() <= 1) { // Eğer saldıran bölgede yeterli asker yoksa
             errorMessage.append("Saldırı yapmak için en az 2 askere ihtiyacınız var."); // Hata mesajı ekler
             return null; // null döndürür
-        } // if koşulunun sonu
+        } 
 
         if (attackDice < 1 || attackDice > 3) { // Eğer zar sayısı geçersizse
             errorMessage.append("Zar sayısı 1 ile 3 arasında olmalı."); // Hata mesajı ekler
             return null; // null döndürür
-        } // if koşulunun sonu
+        } 
 
         if (attackDice >= from.getTroops()) { // Eğer atılacak zar sayısı asker sayısından fazlaysa
             errorMessage.append("Bu kadar zar atamazsınız. En fazla " + (from.getTroops() - 1) + " zar atabilirsiniz."); // Hata mesajı ekler
             return null; // null döndürür
-        } // if koşulunun sonu
+        } 
 
         // Saldıran zarları
         List<Integer> attackerDice = rollDice(attackDice); // Saldıran için zar atar
@@ -404,7 +414,7 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
 
         System.out.println("Oyuncu " + playerId + " " + fromTerritory + " -> " + toTerritory + " bölgesine " + troops + " asker taşıdı."); // İşlem mesajını yazdırır
         return true; // true döndürür
-    } // fortify metodunun sonu
+    } 
 
     /**
      * Oyunun kazanılıp kazanılmadığını kontrol eder
@@ -421,7 +431,7 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
             } // if-else koşulunun sonu
         } // for döngüsünün sonu
         return owner; // Tek sahip varsa onun ID'sini döndür
-    } // checkWinner metodunun sonu
+    } 
 
     /**
      * Oyunun anlık harita durumunu string olarak döndürür
@@ -430,27 +440,27 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
         return territories.values().stream() // Tüm bölgeleri stream'e çevirir
                 .map(Territory::toString) // Her bölgeyi string'e dönüştürür
                 .collect(Collectors.joining(";")); // Noktalı virgülle birleştirip tek string yapar
-    } // getMapState metodunun sonu
+    } 
 
     public int getTroopsToPlace(int playerId) { // Oyuncunun yerleştirmesi gereken asker sayısını döndüren metod
         return playerTroopsToPlace.getOrDefault(playerId, 0); // Oyuncunun asker sayısını döndürür, yoksa 0
-    } // getTroopsToPlace metodunun sonu
+    } 
 
     public int getTerritoryTroops(String territoryName) { // Belirli bir bölgedeki asker sayısını döndüren metod
         Territory t = territories.get(territoryName); // Bölgeyi alır
         return (t != null) ? t.getTroops() : 0; // Bölge varsa asker sayısını, yoksa 0 döndürür
-    } // getTerritoryTroops metodunun sonu
+    } 
 
     public Map<String, Territory> getTerritories() { // Tüm bölgeleri döndüren metod
         return territories; // Bölgeler haritasını döndürür
-    } // getTerritories metodunun sonu
+    } 
 
     public void calculateTroopsFor(int playerId) { // Oyuncunun bir sonraki tur için alacağı asker sayısını hesaplayan metod
         int territoryCount = countPlayerTerritories(playerId); // Oyuncunun sahip olduğu bölge sayısını hesaplar
         int continentBonus = calculateContinentBonus(playerId); // Oyuncunun kıta bonusunu hesaplar
         int troops = Math.max(MIN_TROOPS_PER_TURN, territoryCount / 3) + continentBonus; // Toplam asker sayısını hesaplar (minimum 3, bölge sayısı/3 + kıta bonusu)
         playerTroopsToPlace.put(playerId, troops); // Hesaplanan asker sayısını oyuncu için kaydeder
-    } // calculateTroopsFor metodunun sonu
+    } 
 
     /**
      * İki bölge komşu mu?
@@ -461,7 +471,7 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
 
     public Map<String, List<String>> getAdjacencyMap() { // Komşuluk haritasını döndüren metod
         return adjacencyMap; // Komşuluk haritasını döndürür
-    } // getAdjacencyMap metodunun sonu
+    } 
 
     /**
      * Belirli sayıda zar atar
@@ -473,5 +483,5 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
             result.add(rand.nextInt(6) + 1); // 1-6 arası rastgele sayı üretip listeye ekler
         } // for döngüsünün sonu
         return result; // Zar sonuçlarını döndürür
-    } // rollDice metodunun sonu
-} // RiskGame sınıfının sonu
+    } 
+} 

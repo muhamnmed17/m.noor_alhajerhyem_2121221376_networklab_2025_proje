@@ -12,12 +12,12 @@ public class RiskMatch { // RiskMatch sınıfını tanımla
     private final ClientHandler player1; // Birinci oyuncunun istemci yöneticisi
     private final ClientHandler player2; // İkinci oyuncunun istemci yöneticisi
     private RiskServer server; // Oyun sunucusu referansı
-
+private boolean initialPlacementPhase = true; // ✅ Başlangıç yerleştirme fazı
     private final Map<Integer, ClientHandler> idToPlayer = new HashMap<>(); // Oyuncu ID'den ClientHandler'a eşleme
     private final int[] playerOrder; // Oyuncu sırası dizisi
     private int currentPlayerIndex = 0; // Şu anki oyuncunun dizideki indeksi
     private int currentPlayer; // Şu anki oyuncunun ID'si
-
+    private Set<Integer> playersFinishedPlacement = new HashSet<>(); // Yerleştirmeyi bitiren oyuncular
     private final Set<Integer> restartRequests = new HashSet<>(); // Yeniden başlatma isteği veren oyuncuların ID'leri
     
     private ClientHandler getPlayerById(int id) { // ID'ye göre oyuncu döndürme metodu
@@ -47,20 +47,32 @@ public class RiskMatch { // RiskMatch sınıfını tanımla
                 p2.getPlayerId() + "(" + p2.getPlayerName() + ")"); // Log mesajı yaz
     }
 
-    public void start() { // Oyunu başlatan metot
-        game.initializeGame(player1, player2); // RiskGame nesnesini başlat
-        sendInit(); // Başlangıç bilgilerini gönder
-        sendAdjacency(); // Komşuluk haritasını gönder
-        sendMap(); // Harita durumunu gönder
+   public void start() { // Oyunu başlatan metot
+    // ✅ ÖNCE RiskMatch durumunu temizle
+    initialPlacementPhase = true;           // Başlangıç fazını aktif yap
+    playersFinishedPlacement.clear();       // Yerleştirme tamamlayan oyuncuları temizle
+    restartRequests.clear();                // Yeniden başlatma isteklerini temizle
+    currentPlayerIndex = 0;                 // İlk oyuncudan başla
+    currentPlayer = playerOrder[0];         // Sıradaki oyuncuyu ilk oyuncu yap
+    
+    System.out.println("✅ RiskMatch durumu temizlendi.");
+    
+    // Şimdi oyunu başlat
+    game.initializeGame(player1, player2); // RiskGame nesnesini başlat (bu da kendi temizliğini yapacak)
+    sendInit(); // Başlangıç bilgilerini gönder
+    sendAdjacency(); // Komşuluk haritasını gönder
+    sendMap(); // Harita durumunu gönder
 
-        // İlk oyuncuya başlangıç takviyesi ile TUR ataması
-        int initialTroops = game.getTroopsToPlace(playerOrder[0]); // İlk oyuncunun başlangıç asker sayısını al
-        broadcastMessage(new Message("TURN", Map.of( // Tur bilgisini tüm oyunculara gönder
-            "playerId", String.valueOf(playerOrder[0]), // Sıradaki oyuncu ID'si
-            "troops", String.valueOf(initialTroops), // Yerleştirilecek asker sayısı
-            "name", getCurrentPlayer().getPlayerName() // Sıradaki oyuncu adı
-        )));
-    }
+    // İlk oyuncuya başlangıç takviyesi ile TUR ataması
+    int initialTroops = game.getTroopsToPlace(playerOrder[0]); // İlk oyuncunun başlangıç asker sayısını al
+    broadcastMessage(new Message("TURN", Map.of( // Tur bilgisini tüm oyunculara gönder
+        "playerId", String.valueOf(playerOrder[0]), // Sıradaki oyuncu ID'si
+        "troops", String.valueOf(initialTroops), // Yerleştirilecek asker sayısı
+        "name", getCurrentPlayer().getPlayerName() // Sıradaki oyuncu adı
+    )));
+    
+    System.out.println("✅ Yeni oyun başlatıldı: Oda " + roomId);
+}
 
     private void sendInit() { // Başlangıç bilgilerini gönderen metot
         // Oyuncu ID ve isimlerini gönder
@@ -75,73 +87,137 @@ public class RiskMatch { // RiskMatch sınıfını tanımla
         )));
     }
 
-    public void handlePlaceTroops(int playerId, String territory, int troops) { // Asker yerleştirme işlemini yöneten metot
-        if (playerId != currentPlayer) { // Eğer sıradaki oyuncu değilse
-            return; // İşlem yapma
-        }
-
-        if (game.placeTroops(playerId, territory, troops)) { // Asker yerleştirme başarılıysa
-            int remaining = game.getTroopsToPlace(playerId); // Kalan asker sayısını al
-            
-            // Asker yerleştirme sonucunu ilgili oyuncuya bildir
-            getPlayer(playerId).sendMessage(new Message("PLACE_RESULT", Map.of( // Sonuç mesajı gönder
-                "territory", territory, // Bölge adı
-                "troops", String.valueOf(game.getTerritoryTroops(territory)), // Bölgedeki güncel asker sayısı
-                "remaining", String.valueOf(remaining) // Kalan yerleştirilecek asker sayısı
-            )));
-            
-            sendMap(); // Harita durumunu güncelle
-        } else { // Asker yerleştirme başarısızsa
-            getPlayer(playerId).sendMessage(new Message("ERROR", Map.of( // Hata mesajı gönder
-                "msg", "Asker yerleştirme başarısız" // Hata mesajı
-            )));
-        }
+public void handlePlaceTroops(int playerId, String territory, int troops) {
+    if (playerId != currentPlayer) {
+        return;
     }
 
-    public void handleAttack(int playerId, String from, String to, int dice) { // Saldırı işlemini yöneten metot
-        if (playerId != currentPlayer) { // Eğer sıradaki oyuncu değilse
-            return; // İşlem yapma
-        }
-
-        StringBuilder error = new StringBuilder(); // Hata mesajını tutacak StringBuilder
-        int[] result = game.attack(playerId, from, to, dice, error); // Saldırı sonucunu al
-
-        if (result != null) { // Saldırı başarılıysa
-            broadcastMessage(new Message("ATTACK_RESULT", Map.of( // Saldırı sonucunu tüm oyunculara bildir
-                "from", from, // Saldıran bölge
-                "to", to, // Hedef bölge
-                "attackerLoss", String.valueOf(result[0]), // Saldıran kaybı
-                "defenderLoss", String.valueOf(result[1]) // Savunan kaybı
-            )));
+    if (game.placeTroops(playerId, territory, troops)) {
+        int remaining = game.getTroopsToPlace(playerId);
+        
+        getPlayer(playerId).sendMessage(new Message("PLACE_RESULT", Map.of(
+            "territory", territory,
+            "troops", String.valueOf(game.getTerritoryTroops(territory)),
+            "remaining", String.valueOf(remaining)
+        )));
+        
+        sendMap();
+        
+        // ✅ Başlangıç fazı kontrolü
+        if (initialPlacementPhase && remaining == 0) {
+            playersFinishedPlacement.add(playerId);
             
-            sendMap(); // Harita durumunu güncelle
-            checkGameOver(); // Oyunun bitip bitmediğini kontrol et
-        } else { // Saldırı başarısızsa
-            getPlayer(playerId).sendMessage(new Message("ERROR", Map.of( // Hata mesajı gönder
-                "msg", error.toString() // Hata mesajı
-            )));
+            // Her iki oyuncu da bitirdiyse
+            if (playersFinishedPlacement.size() == 2) {
+                finishInitialPlacement();
+            } else {
+                // Diğer oyuncuya geç (troops hesaplaması YOK)
+                broadcastMessage(new Message("INFO", Map.of(
+                    "msg", getCurrentPlayer().getPlayerName() + " askerlerini yerleştirdi. Sıradaki oyuncu: " + 
+                           getPlayerById(playerOrder[(currentPlayerIndex + 1) % 2]).getPlayerName()
+                )));
+                nextTurn(); // Bu artık troops hesaplamayacak
+            }
         }
+    } else {
+        getPlayer(playerId).sendMessage(new Message("ERROR", Map.of(
+            "msg", "Asker yerleştirme başarısız"
+        )));
+    }
+}
+  
+  private void finishInitialPlacement() {
+    initialPlacementPhase = false; // Başlangıç fazını bitir
+    
+    broadcastMessage(new Message("INFO", Map.of(
+        "msg", "Başlangıç yerleştirme fazı tamamlandı! Normal oyun başlıyor..."
+    )));
+    
+    // Normal oyunu başlat - troops hesaplama ile
+    currentPlayerIndex = 0; // İlk oyuncudan başla
+    currentPlayer = playerOrder[0];
+    
+    game.calculateTroopsFor(currentPlayer); // ✅ İlk kez hesapla
+    int troops = game.getTroopsToPlace(currentPlayer);
+    
+    broadcastMessage(new Message("TURN", Map.of(
+        "playerId", String.valueOf(currentPlayer),
+        "troops", String.valueOf(troops),
+        "name", getCurrentPlayer().getPlayerName()
+    )));
+}
+
+  public void handleAttack(int playerId, String from, String to, int dice) { // Saldırı işlemini yöneten metot
+    if (playerId != currentPlayer) { // Eğer sıradaki oyuncu değilse
+        return; // İşlem yapma
+    }
+    
+    // ✅ Başlangıç fazında saldırı yasak
+    if (initialPlacementPhase) {
+        getPlayer(playerId).sendMessage(new Message("ERROR", Map.of(
+            "msg", "Başlangıç fazında sadece asker yerleştirme yapabilirsiniz."
+        )));
+        return;
     }
 
-    public void handleFortify(int playerId, String from, String to, int troops) { // Güçlendirme işlemini yöneten metot
-        if (playerId != currentPlayer) { // Eğer sıradaki oyuncu değilse
-            return; // İşlem yapma
-        }
+    StringBuilder error = new StringBuilder(); // Hata mesajını tutacak StringBuilder
+    int[] result = game.attack(playerId, from, to, dice, error); // Saldırı sonucunu al
 
-        if (game.fortify(playerId, from, to, troops)) { // Güçlendirme başarılıysa
-            broadcastMessage(new Message("FORTIFY_RESULT", Map.of( // Güçlendirme sonucunu tüm oyunculara bildir
-                "from", from, // Kaynak bölge
-                "to", to, // Hedef bölge
-                "troops", String.valueOf(troops) // Taşınan asker sayısı
-            )));
-            
-            sendMap(); // Harita durumunu güncelle
-        } else { // Güçlendirme başarısızsa
-            getPlayer(playerId).sendMessage(new Message("ERROR", Map.of( // Hata mesajı gönder
-                "msg", "Güçlendirme başarısız" // Hata mesajı
-            )));
-        }
+    if (result != null) { // Saldırı başarılıysa
+        broadcastMessage(new Message("ATTACK_RESULT", Map.of( // Saldırı sonucunu tüm oyunculara bildir
+            "from", from, // Saldıran bölge
+            "to", to, // Hedef bölge
+            "attackerLoss", String.valueOf(result[0]), // Saldıran kaybı
+            "defenderLoss", String.valueOf(result[1]) // Savunan kaybı
+        )));
+        
+        sendMap(); // Harita durumunu güncelle
+        checkGameOver(); // Oyunun bitip bitmediğini kontrol et
+        
+        // ✅ Saldırı sonrası tur bitmez, oyuncu isterse devam edebilir
+        
+    } else { // Saldırı başarısızsa
+        getPlayer(playerId).sendMessage(new Message("ERROR", Map.of( // Hata mesajı gönder
+            "msg", error.toString() // Hata mesajı
+        )));
     }
+}
+
+   public void handleFortify(int playerId, String from, String to, int troops) { // Güçlendirme işlemini yöneten metot
+    if (playerId != currentPlayer) { // Eğer sıradaki oyuncu değilse
+        return; // İşlem yapma
+    }
+    
+    // ✅ Başlangıç fazında güçlendirme yasak
+    if (initialPlacementPhase) {
+        getPlayer(playerId).sendMessage(new Message("ERROR", Map.of(
+            "msg", "Başlangıç fazında sadece asker yerleştirme yapabilirsiniz."
+        )));
+        return;
+    }
+
+    if (game.fortify(playerId, from, to, troops)) { // Güçlendirme başarılıysa
+        broadcastMessage(new Message("FORTIFY_RESULT", Map.of( // Güçlendirme sonucunu tüm oyunculara bildir
+            "from", from, // Kaynak bölge
+            "to", to, // Hedef bölge
+            "troops", String.valueOf(troops) // Taşınan asker sayısı
+        )));
+        
+        sendMap(); // Harita durumunu güncelle
+        
+        // ✅ Güçlendirme sonrası tur otomatik bitsin (Risk kuralları gereği)
+        broadcastMessage(new Message("INFO", Map.of(
+            "msg", getCurrentPlayer().getPlayerName() + " güçlendirme yaptı. Sıra geçiyor..."
+        )));
+        
+        nextTurn(); // Sıradaki oyuncuya geç
+        
+    } else { // Güçlendirme başarısızsa
+        getPlayer(playerId).sendMessage(new Message("ERROR", Map.of( // Hata mesajı gönder
+            "msg", "Güçlendirme başarısız" // Hata mesajı
+        )));
+    }
+}
 
     public void handleEndTurn(int playerId) { // Tur bitirme işlemini yöneten metot
         if (playerId != currentPlayer) { // Eğer sıradaki oyuncu değilse
@@ -150,19 +226,23 @@ public class RiskMatch { // RiskMatch sınıfını tanımla
         nextTurn(); // Sıradaki oyuncuya geç
     }
 
-    public void nextTurn() { // Sıradaki oyuncuya geçen metot
-        currentPlayerIndex = (currentPlayerIndex + 1) % 2; // Oyuncu indeksini güncelle (0->1, 1->0)
-        currentPlayer = playerOrder[currentPlayerIndex]; // Sıradaki oyuncu ID'sini ayarla
+ public void nextTurn() { // Sıradaki oyuncuya geçen metot
+    currentPlayerIndex = (currentPlayerIndex + 1) % 2; // Oyuncu indeksini güncelle
+    currentPlayer = playerOrder[currentPlayerIndex]; // Sıradaki oyuncu ID'sini ayarla
 
-        game.calculateTroopsFor(currentPlayer); // Sıradaki oyuncu için asker sayısını hesapla
-        int troops = game.getTroopsToPlace(currentPlayer); // Yerleştirilecek asker sayısını al
-
-        broadcastMessage(new Message("TURN", Map.of( // Tur bilgisini tüm oyunculara gönder
-            "playerId", String.valueOf(currentPlayer), // Sıradaki oyuncu ID
-            "troops", String.valueOf(troops), // Yerleştirilecek asker sayısı
-            "name", getCurrentPlayer().getPlayerName() // Sıradaki oyuncu adı
-        )));
+    // ✅ Sadece normal oyunda troops hesapla, başlangıç fazında değil
+    if (!initialPlacementPhase) {
+        game.calculateTroopsFor(currentPlayer); // Normal oyunda asker hesapla
     }
+    
+    int troops = game.getTroopsToPlace(currentPlayer); // Mevcut asker sayısını al
+
+    broadcastMessage(new Message("TURN", Map.of( // Tur bilgisini tüm oyunculara gönder
+        "playerId", String.valueOf(currentPlayer), // Sıradaki oyuncu ID
+        "troops", String.valueOf(troops), // Yerleştirilecek asker sayısı
+        "name", getCurrentPlayer().getPlayerName() // Sıradaki oyuncu adı
+    )));
+}
 
     private void checkGameOver() { // Oyunun bitip bitmediğini kontrol eden metot
         int winner = game.checkWinner(); // Kazananı belirle
@@ -173,51 +253,71 @@ public class RiskMatch { // RiskMatch sınıfını tanımla
         }
     }
 
-    public void handleRestartRequest(int playerId) { // Yeniden başlatma isteğini yöneten metot
-        if (game.checkWinner() == -1) { // Eğer oyun henüz bitmemişse
-            getPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
-                "msg", "Oyun henüz bitmedi, yeniden başlatılamaz." // Bilgi mesajı
-            )));
-            return; // İşlemi sonlandır
-        }
-
-        if (restartRequests.contains(playerId)) { // Eğer oyuncu zaten istek göndermişse
-            return; // İşlemi sonlandır
-        }
-
-        restartRequests.add(playerId); // İsteği listeye ekle
+    
+public void handleRestartRequest(int playerId) { // Yeniden başlatma isteğini yöneten metot
+    if (game.checkWinner() == -1) { // Eğer oyun henüz bitmemişse
         getPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
-            "msg", "Yeniden başlatma isteğiniz alındı." // Bilgi mesajı
+            "msg", "Oyun henüz bitmedi, yeniden başlatılamaz." // Bilgi mesajı
         )));
-
-        // Eğer sadece 1 oyuncu kaldıysa → direkt başlat
-        if (checkActivePlayerCount() == 1) { // Aktif oyuncu sayısı 1 ise
-            getPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
-                "msg", "Yeni bir rakip bekleniyor..." // Bilgi mesajı
-            )));
-            server.addToWaiting(getPlayer(playerId)); // Oyuncuyu bekleme listesine ekle
-            return; // İşlemi sonlandır
-        }
-
-        // Normal 2 oyuncu durumu
-        if (restartRequests.size() == 2) { // Eğer her iki oyuncu da istek göndermişse
-            broadcastMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
-                "msg", "Her iki oyuncu da yeniden başlatmayı onayladı. Oyun sıfırlanıyor..." // Bilgi mesajı
-            )));
-            
-            restartRequests.clear(); // İstek listesini temizle
-            game.initializeGame(player1, player2); // Oyunu yeniden başlat
-            sendMap(); // Harita durumunu gönder
-            sendAdjacency(); // Komşuluk haritasını gönder
-            currentPlayerIndex = 0; // İlk oyuncudan başla
-            currentPlayer = playerOrder[0]; // İlk oyuncuyu sıraya al
-            nextTurn(); // Tur başlat
-        } else { // Sadece bir oyuncu istek göndermişse
-            getOtherPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Diğer oyuncuya bilgilendirme gönder
-                "msg", "Diğer oyuncudan yeniden başlatma isteği geldi." // Bilgi mesajı
-            )));
-        }
+        return; // İşlemi sonlandır
     }
+
+    if (restartRequests.contains(playerId)) { // Eğer oyuncu zaten istek göndermişse
+        return; // İşlemi sonlandır
+    }
+
+    restartRequests.add(playerId); // İsteği listeye ekle
+    getPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
+        "msg", "Yeniden başlatma isteğiniz alındı." // Bilgi mesajı
+    )));
+
+    // Eğer sadece 1 oyuncu kaldıysa → direkt başlat
+    if (checkActivePlayerCount() == 1) { // Aktif oyuncu sayısı 1 ise
+        ClientHandler waitingPlayer = getPlayer(playerId);
+        
+        waitingPlayer.sendMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
+            "msg", "Yeni bir rakip bekleniyor..." // Bilgi mesajı
+        )));
+        
+        // ✅ Oyuncuyu bekleme listesine eklerken RiskMatch referansı temizlenecek
+        server.addToWaiting(waitingPlayer); // Oyuncuyu bekleme listesine ekle
+        
+        System.out.println("Oyuncu " + playerId + " tek kaldı, bekleme listesine eklendi.");
+        return; // İşlemi sonlandır
+    }
+
+    // Normal 2 oyuncu durumu
+    if (restartRequests.size() == 2) { // Eğer her iki oyuncu da istek göndermişse
+        broadcastMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
+            "msg", "Her iki oyuncu da yeniden başlatmayı onayladı. Oyun sıfırlanıyor..." // Bilgi mesajı
+        )));
+        
+        restartRequests.clear(); // İstek listesini temizle
+        
+        // ✅ Oyunu yeniden başlatmadan önce referansları temizle
+        initialPlacementPhase = true;
+        playersFinishedPlacement.clear();
+        
+        game.initializeGame(player1, player2); // Oyunu yeniden başlat
+        sendMap(); // Harita durumunu gönder
+        sendAdjacency(); // Komşuluk haritasını gönder
+        currentPlayerIndex = 0; // İlk oyuncudan başla
+        currentPlayer = playerOrder[0]; // İlk oyuncuyu sıraya al
+        
+        // İlk oyuncunun başlangıç askerlerini hesapla
+        int initialTroops = game.getTroopsToPlace(playerOrder[0]);
+        broadcastMessage(new Message("TURN", Map.of(
+            "playerId", String.valueOf(playerOrder[0]),
+            "troops", String.valueOf(initialTroops),
+            "name", getCurrentPlayer().getPlayerName()
+        )));
+        
+    } else { // Sadece bir oyuncu istek göndermişse
+        getOtherPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Diğer oyuncuya bilgilendirme gönder
+            "msg", "Diğer oyuncudan yeniden başlatma isteği geldi." // Bilgi mesajı
+        )));
+    }
+}
 
     private int checkActivePlayerCount() { // Aktif oyuncu sayısını kontrol eden metot
         Set<Integer> active = new HashSet<>(); // Aktif oyuncu ID'lerini tutacak küme
@@ -244,34 +344,40 @@ public class RiskMatch { // RiskMatch sınıfını tanımla
         server.addToWaiting(waitingPlayer); // Bekleyen oyuncuyu bekleme listesine ekle
     }
 
-    public void handleDisconnect(int playerId) { // Bağlantı kopması durumunu yöneten metot
-        int otherPlayerId = (playerId == playerOrder[0]) ? playerOrder[1] : playerOrder[0]; // Diğer oyuncunun ID'sini bul
-        ClientHandler otherPlayer = getPlayerById(otherPlayerId); // Diğer oyuncuyu al
+     public void handleDisconnect(int playerId) { // Bağlantı kopması durumunu yöneten metot
+    int otherPlayerId = (playerId == playerOrder[0]) ? playerOrder[1] : playerOrder[0]; // Diğer oyuncunun ID'sini bul
+    ClientHandler otherPlayer = getPlayerById(otherPlayerId); // Diğer oyuncuyu al
 
-        if (otherPlayer == null) { // Eğer diğer oyuncu da bağlantısını kesmişse
-            return; // İşlemi sonlandır
-        }
-
-        int loserId = playerId; // Kaybeden oyuncu ayrılan oyuncu
-        int winnerId = otherPlayerId; // Kazanan oyuncu kalan oyuncu
-
-        // Tüm bölgeleri kazanana geçir
-        for (Territory t : game.getTerritories().values()) { // Tüm bölgeleri döngüye al
-            if (t.getOwner() == loserId) { // Eğer bölge ayrılan oyuncunun ise
-                t.setOwner(winnerId); // Bölgenin sahibini kalan oyuncu olarak ayarla
-            }
-        }
-
-        otherPlayer.sendMessage(new Message("INFO", Map.of( // Kalan oyuncuya bilgi mesajı gönder
-            "msg", "Rakip oyundan ayrıldı. Tebrikler kazandınız!" // Bilgi mesajı
-        )));
-        
-        otherPlayer.sendMessage(new Message("RESTART_PROMPT", Map.of( // Yeniden başlatma sorgusu gönder
-            "msg", "Rakip oyundan ayrıldı. Yeni bir oyuncuyla eşleşmek ister misiniz?" // Soru mesajı
-        )));
-
-        System.out.println("Oyuncu ayrıldı, diğer oyuncuya RESTART_PROMPT gönderildi."); // Log mesajı yaz
+    if (otherPlayer == null) { // Eğer diğer oyuncu da bağlantısını kesmişse
+        return; // İşlemi sonlandır
     }
+
+    int loserId = playerId; // Kaybeden oyuncu ayrılan oyuncu
+    int winnerId = otherPlayerId; // Kazanan oyuncu kalan oyuncu
+
+    // Tüm bölgeleri kazanana geçir
+    for (Territory t : game.getTerritories().values()) { // Tüm bölgeleri döngüye al
+        if (t.getOwner() == loserId) { // Eğer bölge ayrılan oyuncunun ise
+            t.setOwner(winnerId); // Bölgenin sahibini kalan oyuncu olarak ayarla
+        }
+    }
+
+    // ✅ Ayrılan oyuncunun RiskMatch referansını temizle
+    ClientHandler disconnectedPlayer = getPlayerById(playerId);
+    if (disconnectedPlayer != null) {
+        disconnectedPlayer.setRiskMatch(null);
+    }
+
+    otherPlayer.sendMessage(new Message("INFO", Map.of( // Kalan oyuncuya bilgi mesajı gönder
+        "msg", "Rakip oyundan ayrıldı. Tebrikler kazandınız!" // Bilgi mesajı
+    )));
+    
+    otherPlayer.sendMessage(new Message("RESTART_PROMPT", Map.of( // Yeniden başlatma sorgusu gönder
+        "msg", "Rakip oyundan ayrıldı. Yeni bir oyuncuyla eşleşmek ister misiniz?" // Soru mesajı
+    )));
+
+    System.out.println("Oyuncu " + playerId + " ayrıldı, diğer oyuncuya RESTART_PROMPT gönderildi.");
+}
 
     private ClientHandler getPlayer(int id) { // ID'ye göre oyuncu getiren yardımcı metot
         return idToPlayer.get(id); // ID'ye karşılık gelen oyuncuyu döndür

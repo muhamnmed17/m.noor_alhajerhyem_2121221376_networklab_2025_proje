@@ -75,14 +75,18 @@ public class RiskServer {
     /**
      * Oyuncuyu bekleme listesine ekler
      */
-    public synchronized void addToWaiting(ClientHandler client) {
-        synchronized (waitingClients) {
-            if (!waitingClients.contains(client)) {
-                waitingClients.add(client);
-                System.out.println("Oyuncu bekleme listesine eklendi: " + client.getPlayerId());
-            }
+public synchronized void addToWaiting(ClientHandler client) {
+    synchronized (waitingClients) {
+        if (!waitingClients.contains(client)) {
+            // ✅ RiskMatch referansını temizle
+            client.setRiskMatch(null);
+            
+            waitingClients.add(client);
+            System.out.println("Oyuncu bekleme listesine eklendi: " + client.getPlayerId() + 
+                             " (" + client.getPlayerName() + ")");
         }
     }
+}
 
     /**
      * İstemciyi tüm listelerden kaldırır
