@@ -36,43 +36,93 @@ public class ClientHandler implements Runnable { // ClientHandler sınıfı tan�
         }
     }
 
+    
     @Override
-    public void run() { // Runnable arayüzünden Override edilen çalışma metodu
-        try { // Ana çalışma bloğu
-            Object inputObj; // Alınan nesneyi tutacak değişken
-            while (running && (inputObj = in.readObject()) != null) { // İş parçacığı çalıştığı ve gelen nesne null olmadığı sürece
-                // Gelen mesajların formatına göre işle
-                if (inputObj instanceof Message) { // Eğer nesne Message türündeyse
-                    processMessage((Message) inputObj); // Message işleme metodunu çağır
-                } else if (inputObj instanceof String) { // Eğer nesne String türündeyse
-                    // Geriye uyumluluk için string mesajları da destekle
-                    processLegacyCommand((String) inputObj); // Eski format komutu işleme metodunu çağır
-                }
+public void run() {
+    try {
+        Object inputObj; // Gelen mesajı tutacak değişken
+        
+        // Thread çalıştığı ve mesaj geldiği sürece döngüde kal
+        while (running && (inputObj = in.readObject()) != null) {
+            
+            // Gelen nesnenin tipine göre işle
+            if (inputObj instanceof Message) {
+                // Yeni mesaj formatı (Message nesnesi)
+                processMessage((Message) inputObj);
+            } else if (inputObj instanceof String) {
+                // Eski mesaj formatı (String) - geriye uyumluluk için
+                processLegacyCommand((String) inputObj);
             }
-        } catch (SocketException | EOFException e) { // Soket hatası veya dosya sonu hatası durumunda
-            System.out.println("İstemci bağlantısı kesildi: " + e.getMessage()); // Bilgi mesajı yazdır
-        } catch (IOException | ClassNotFoundException e) { // IO hatası veya sınıf bulunamadı hatası durumunda
-            System.err.println("İstemci ile iletişim kesildi: " + e.getMessage()); // Hata mesajı yazdır
-        } finally { // Her durumda çalışacak blok
-            handleDisconnect(); // Bağlantı kesme işlemini yönet
         }
+        
+    } catch (SocketException | EOFException e) {
+        // Normal bağlantı kesme durumları
+        // SocketException: Oyuncu programı kapattı
+        // EOFException: Bağlantının diğer ucu kapandı
+        // Bu normal durumlar, çok detaylı log yapmaya gerek yok
+        System.out.println(" Oyuncu " + playerId + " (" + playerName + ") bağlantısını sonlandırdı.");
+        
+    } catch (IOException e) {
+        // Giriş/çıkış hataları - ağ problemleri
+        if (e.getMessage() != null && 
+            (e.getMessage().contains("Connection reset") || 
+             e.getMessage().contains("connection was aborted"))) {
+            // Bu hatalar oyuncunun beklenmeyen şekilde çıktığını gösterir
+            // (program crash, ağ kesilmesi vs.)
+            System.out.println(" Oyuncu " + playerId + " (" + playerName + ") beklenmeyen şekilde bağlantısını kesti.");
+        } else {
+            // Diğer I/O hataları - daha genel ağ problemleri
+            System.out.println(" Oyuncu " + playerId + " (" + playerName + ") ile iletişim hatası.");
+        }
+        
+    } catch (ClassNotFoundException e) {
+        // Serileştirme hatası - gelen nesne tanınamadı
+        // Bu oyuncunun yanlış format mesaj gönderdiğini gösterir
+        System.out.println("⚠️ Oyuncu " + playerId + " bilinmeyen mesaj formatı gönderdi.");
+        
+    } catch (Exception e) {
+        // Tüm diğer beklenmeyen hatalar - bunlar ciddi olabilir
+        // Bu tür hatalar debug edilmeli
+        System.err.println(" Oyuncu " + playerId + " beklenmeyen hata: " + e.getMessage());
+        
+    } finally {
+        // Her durumda (hata olsun olmasın) temizlik yap
+        // finally bloğu try-catch'den çıkarken her zaman çalışır
+        handleDisconnect();
     }
+}
 
     /**
      * Bağlantı kesilince temizlik yapar
      */
-    private void handleDisconnect() { // Bağlantı kesildiğinde temizlik yapan metot
-        try { // Temizlik bloğu
-            if (riskMatch != null) { // Eğer oyuncu bir eşleşmeye katılmışsa
-                riskMatch.handleDisconnect(playerId); // Eşleşmeye bağlantı kesme bilgisini ilet
-            } else { // Eğer henüz eşleşmeye katılmamışsa
-                server.removeClient(this); // Sunucudan istemciyi kaldır
-            }
-            close(); // Kaynakları kapat
-        } catch (IOException e) { // IO hatası durumunda
-            System.err.println("Kapatma hatası: " + e.getMessage()); // Hata mesajı yazdır
+ private void handleDisconnect() {
+    try {
+        // Eğer oyuncu bir eşleşmede (match) ise
+        if (riskMatch != null) {
+            // Match'e oyuncunun ayrıldığını bildir (rakibe haber ver, oyunu sonlandır vs.)
+            riskMatch.handleDisconnect(playerId);
+        } else {
+            // Henüz eşleşmede değilse (bekleme listesinde), direkt sunucudan çıkar
+            server.removeClient(this);
+        }
+        
+        // Tüm network kaynaklarını kapat (stream'ler, socket vs.)
+        close();
+        
+        // Başarılı ayrılma log'u - kullanıcı dostu mesaj
+        System.out.println(" Oyuncu " + playerId + " (" + playerName + ") oyundan ayrıldı.");
+        
+    } catch (IOException e) {
+        // Kapatma sırasında oluşan hatalar - genelde önemli değil
+        if (e.getMessage().contains("Socket closed")) {
+            // Socket zaten kapalıydı - bu normal
+            System.out.println(" Oyuncu " + playerId + " bağlantısı zaten kapatılmıştı.");
+        } else {
+            // Diğer I/O hataları - detaya girmeyerek genel bilgi ver
+            System.out.println(" Oyuncu " + playerId + " temizlenirken küçük bir hata oluştu.");
         }
     }
+}
 
     /**
      * Yeni mesaj formatında gelen mesajları işler
@@ -216,17 +266,35 @@ public class ClientHandler implements Runnable { // ClientHandler sınıfı tan�
     /**
      * İstemciye mesaj gönderir
      */
-    public void sendMessage(Message message) { // Mesaj gönderme metodu
-        try { // Mesaj gönderme bloğu
-            if (out != null && clientSocket != null && !clientSocket.isClosed()) { // Çıkış akışı ve soket hala açıksa
-                out.writeObject(message); // Mesaj nesnesini gönder
-                out.flush(); // Hemen gönderilmesini sağla (buffer'ı temizle)
-                out.reset(); // Object cache'ini temizle (aynı nesneyi değiştirip tekrar gönderince sorun olmasın)
-            }
-        } catch (Exception e) { // Hata durumunda
-            System.err.println("Mesaj gönderilirken hata: " + e.getMessage()); // Hata mesajı yazdır
+  public void sendMessage(Message message) {
+    try {
+        // Bağlantı kontrolü: stream'ler ve socket açık mı?
+        if (out != null && clientSocket != null && !clientSocket.isClosed()) {
+            out.writeObject(message); // Mesajı nesne olarak gönder
+            out.flush(); // Buffer'ı hemen boşalt (mesaj anında gitsin)
+            out.reset(); // Object cache temizle (aynı nesne tekrar gönderilirse sorun olmasın)
         }
+    } catch (SocketException e) {
+        // SocketException: Bağlantı kesildi - bu normal bir durum (oyuncu çıktı)
+        // Çok detaylı log yapmaya gerek yok, sadece bilgilendir
+        System.out.println(" Oyuncu " + playerId + " bağlantısı kesildi, mesaj gönderilemedi.");
+    } catch (IOException e) {
+        // IOException: Giriş/çıkış hataları - bağlantı problemleri
+        // Hata mesajına göre daha spesifik bilgi ver
+        if (e.getMessage().contains("Connection reset") || 
+            e.getMessage().contains("connection was aborted") ||
+            e.getMessage().contains("Broken pipe")) {
+            // Bu hatalar genelde oyuncunun aniden programı kapattığını gösterir
+            System.out.println(" Oyuncu " + playerId + " beklenmeyen şekilde bağlantısını kesti.");
+        } else {
+            // Diğer I/O hataları - daha genel ağ problemleri
+            System.out.println(" Oyuncu " + playerId + " ile iletişim hatası: " + e.getMessage());
+        }
+    } catch (Exception e) {
+        // Diğer tüm beklenmeyen hatalar - bunlar ciddi olabilir
+        System.err.println("⚠️ Oyuncu " + playerId + " mesaj gönderiminde beklenmeyen hata: " + e.getMessage());
     }
+}
     
     /**
      * Eski string formatında mesaj gönderir (geriye uyumluluk için)
@@ -263,19 +331,43 @@ public class ClientHandler implements Runnable { // ClientHandler sınıfı tan�
     /**
      * Bağlantıyı kapatır
      */
-    public void close() throws IOException { // Kaynakları kapatma metodu
-        running = false; // İş parçacığını durdur
-        if (in != null) { // Giriş akışı varsa
-            in.close(); // Giriş akışını kapat
+    public void close() throws IOException {
+    running = false; // Thread döngüsünü durdur
+    
+    // Input Stream'i kapat
+    try {
+        if (in != null) {
+            in.close(); // Gelen mesajları okuyan stream'i kapat
         }
-        if (out != null) { // Çıkış akışı varsa
-            out.close(); // Çıkış akışını kapat
-        }
-        if (clientSocket != null && !clientSocket.isClosed()) { // Soket varsa ve hala açıksa
-            clientSocket.close(); // Soketi kapat
-        }
+    } catch (IOException e) {
+        // Input stream kapatma hatası - genelde önemli değil (zaten kapalı olabilir)
+        System.out.println("🔌 Oyuncu " + playerId + " giriş akışı kapatılırken ufak hata oluştu.");
     }
-
+    
+    // Output Stream'i kapat
+    try {
+        if (out != null) {
+            out.close(); // Giden mesajları gönderen stream'i kapat
+        }
+    } catch (IOException e) {
+        // Output stream kapatma hatası - genelde önemli değil
+        System.out.println(" Oyuncu " + playerId + " çıkış akışı kapatılırken ufak hata oluştu.");
+    }
+    
+    // Socket'i kapat (ana bağlantı)
+    try {
+        if (clientSocket != null && !clientSocket.isClosed()) {
+            clientSocket.close(); // Ağ bağlantısını tamamen kes
+        }
+    } catch (IOException e) {
+        // Socket kapatma hatası - bu da normal olabilir (zaten kapalı)
+        if (e.getMessage().contains("Socket closed")) {
+            System.out.println(" Oyuncu " + playerId + " bağlantısı zaten kapatılmıştı.");
+        } else {
+            // Başka bir socket hatası
+            System.out.println(" Oyuncu " + playerId + " bağlantısı kapatılırken hata: " + e.getMessage());
+        }
+    }}
     public int getPlayerId() { // Oyuncu ID'sini getiren metot
         return playerId; // Oyuncu ID'sini döndür
     }
