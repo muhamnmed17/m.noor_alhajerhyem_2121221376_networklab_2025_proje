@@ -1,19 +1,18 @@
-package final_project; // Proje paket adı
+package final_project; 
 
-import javax.swing.*; // Swing GUI bileşenlerini içe aktar
-import java.awt.*; // AWT GUI bileşenlerini içe aktar
-import java.awt.event.*; // AWT olay işleyicilerini içe aktar
-import java.io.*; // Giriş/çıkış işlemleri için kütüphaneleri içe aktar
-import java.net.*; // Ağ işlemleri için kütüphaneleri içe aktar
-import java.util.*; // Genel koleksiyon ve yardımcı sınıfları içe aktar
-import java.util.concurrent.*; // Eşzamanlı işlemler için kütüphaneleri içe aktar
-import java.util.List; // List arayüzünü içe aktar
-import javax.swing.border.*; // Swing kenarlık bileşenlerini içe aktar
-import java.util.Timer; // Zamanlayıcı sınıfını içe aktar
-import java.util.TimerTask; // Zamanlayıcı görevi sınıfını içe aktar
-import javax.imageio.ImageIO; // Resim okuma/yazma işlemleri için kütüphaneyi içe aktar
-import java.awt.image.BufferedImage; // Tamponlanmış resim sınıfını içe aktar
-
+import javax.swing.*; 
+import java.awt.*; 
+import java.awt.event.*;
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+import java.util.concurrent.*; 
+import java.util.List; 
+import javax.swing.border.*; 
+import java.util.Timer; 
+import java.util.TimerTask; 
+import javax.imageio.ImageIO; 
+import java.awt.image.BufferedImage; 
 /**
  * Risk oyunu için geliştirilmiş istemci uygulaması
  */
