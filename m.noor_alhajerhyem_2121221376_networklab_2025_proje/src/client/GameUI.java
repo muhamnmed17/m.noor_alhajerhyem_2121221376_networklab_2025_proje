@@ -255,37 +255,45 @@ public class GameUI { // Ana UI sınıfının tanımlanması
         logToConsole("Asker yerleştirme modu aktif. Kalan: " + remaining); // Konsola mesaj yazma
     }
     
-    private void toggleAttackMode() { // Saldırı modunu açma/kapama metodu
-        gameState.setAttackMode(!gameState.isAttackMode()); // Saldırı modunu tersine çevirme
-        gameState.setFortifyMode(false); // Güçlendirme modunu kapatma
-        gameState.clearSelections(); // Seçimleri temizleme
-        
-        if (gameState.isAttackMode()) { // Saldırı modu açıksa
-            statusLabel.setText("Saldırı modu aktif. Saldıran bölgeyi seçin."); // Durum etiketini güncelleme
-            logToConsole("Saldırı modu başlatıldı."); // Konsola mesaj yazma
-        } else { // Saldırı modu kapalıysa
-            statusLabel.setText("Saldırı modu kapatıldı."); // Durum etiketini güncelleme
-            logToConsole("Saldırı modu kapatıldı."); // Konsola mesaj yazma
-        }
-        
-        mapPanel.repaint(); // Harita panelini yeniden çizme
+   private void toggleAttackMode() { // Saldırı modunu açma/kapama metodu
+    gameState.setAttackMode(!gameState.isAttackMode()); // Saldırı modunu tersine çevirme
+    gameState.setFortifyMode(false); // Güçlendirme modunu kapatma
+    
+    if (gameState.isAttackMode()) { // Saldırı modu açıksa
+        statusLabel.setText("Saldırı modu aktif. Saldıran bölgeyi seçin."); // Durum etiketini güncelleme
+        logToConsole("Saldırı modu başlatıldı."); // Konsola mesaj yazma
+        // Sadece seçimleri temizle, ama mode'ları koruma
+        gameState.setSelectedTerritory(null);
+        gameState.setTargetTerritory(null);
+        gameState.getHighlightedTargets().clear();
+    } else { // Saldırı modu kapalıysa
+        statusLabel.setText("Saldırı modu kapatıldı."); // Durum etiketini güncelleme
+        logToConsole("Saldırı modu kapatıldı."); // Konsola mesaj yazma
+        gameState.clearSelections(); // Tüm seçimleri temizle
     }
     
-    private void toggleFortifyMode() { // Güçlendirme modunu açma/kapama metodu
-        gameState.setFortifyMode(!gameState.isFortifyMode()); // Güçlendirme modunu tersine çevirme
-        gameState.setAttackMode(false); // Saldırı modunu kapatma
-        gameState.clearSelections(); // Seçimleri temizleme
-        
-        if (gameState.isFortifyMode()) { // Güçlendirme modu açıksa
-            statusLabel.setText("Güçlendirme modu aktif. Kaynak bölgenizi seçin."); // Durum etiketini güncelleme
-            logToConsole("Güçlendirme modu başlatıldı."); // Konsola mesaj yazma
-        } else { // Güçlendirme modu kapalıysa
-            statusLabel.setText("Güçlendirme modu kapatıldı."); // Durum etiketini güncelleme
-            logToConsole("Güçlendirme modu kapatıldı."); // Konsola mesaj yazma
-        }
-        
-        mapPanel.repaint(); // Harita panelini yeniden çizme
+    mapPanel.repaint(); // Harita panelini yeniden çizme
+}
+    
+   private void toggleFortifyMode() { // Güçlendirme modunu açma/kapama metodu
+    gameState.setFortifyMode(!gameState.isFortifyMode()); // Güçlendirme modunu tersine çevirme
+    gameState.setAttackMode(false); // Saldırı modunu kapatma
+    
+    if (gameState.isFortifyMode()) { // Güçlendirme modu açıksa
+        statusLabel.setText("Güçlendirme modu aktif. Kaynak bölgenizi seçin."); // Durum etiketini güncelleme
+        logToConsole("Güçlendirme modu başlatıldı."); // Konsola mesaj yazma
+        // Sadece seçimleri temizle, ama mode'ları koruma
+        gameState.setSelectedTerritory(null);
+        gameState.setTargetTerritory(null);
+        gameState.getHighlightedTargets().clear();
+    } else { // Güçlendirme modu kapalıysa
+        statusLabel.setText("Güçlendirme modu kapatıldı."); // Durum etiketini güncelleme
+        logToConsole("Güçlendirme modu kapatıldı."); // Konsola mesaj yazma
+        gameState.clearSelections(); // Tüm seçimleri temizle
     }
+    
+    mapPanel.repaint(); // Harita panelini yeniden çizme
+}
     
     private void endTurn() { // Sırayı bitirme metodu
         Message endTurnMsg = new Message("END_TURN", Collections.emptyMap()); // Sıra bitirme mesajı oluşturma
@@ -298,12 +306,12 @@ public class GameUI { // Ana UI sınıfının tanımlanması
         mapPanel.repaint(); // Harita panelini yeniden çizme
     }
     
-    private void clearSelectionAndModes() { // Seçim ve modları temizleme metodu
-        gameState.clearSelections(); // Seçimleri temizleme
-        statusLabel.setText("Seçim temizlendi."); // Durum etiketini güncelleme
-        logToConsole("Seçimler sıfırlandı."); // Konsola mesaj yazma
-        mapPanel.repaint(); // Harita panelini yeniden çizme
-    }
+  private void clearSelectionAndModes() { // Seçim ve modları temizleme metodu
+    gameState.clearSelections(); // Seçimleri temizleme (bu artık mode'ları da temizler)
+    statusLabel.setText("Seçim ve modlar temizlendi."); // Durum etiketini güncelleme
+    logToConsole("Seçimler ve modlar sıfırlandı."); // Konsola mesaj yazma
+    mapPanel.repaint(); // Harita panelini yeniden çizme
+}
     
     private void handleMapClick(Point point) { // Harita tıklama olayını işleme metodu
         if (gameState.isGameOver()) { // Oyun bittiyse
