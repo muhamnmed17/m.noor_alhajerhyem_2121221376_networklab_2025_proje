@@ -15,7 +15,7 @@ public class RiskServer {
 
     private static final int PORT = 9090; // Sunucunun dinleyeceği port
     private int nextRoomId = 1;           // Oda ID sayacı
-
+    private int nextPlayerId = 0;
     private ServerSocket serverSocket;                // Sunucu soketi
     private final List<ClientHandler> allClients = new ArrayList<>();    // Bağlı tüm istemciler
     private final List<ClientHandler> waitingClients = new ArrayList<>(); // Eşleşmeyi bekleyen oyuncular
@@ -50,30 +50,33 @@ public class RiskServer {
     /**
      * Yeni bir bağlantıyı yönetir
      */
-    private void handleNewConnection(Socket clientSocket) {
+private void handleNewConnection(Socket clientSocket) {
+    try {
+        System.out.println("Yeni istemci bağlandı: " + clientSocket.getInetAddress());
+        int assignedId = nextPlayerId++; // ← DEĞİŞTİRİLDİ: benzersiz ID ataması
+        System.out.println(" Assigned Player ID: " + assignedId); // ← DEBUG LOG
+        
+        ClientHandler handler = new ClientHandler(clientSocket, assignedId, this); // ← DEĞİŞTİRİLDİ
+
+        synchronized (allClients) {
+            allClients.add(handler); // Tüm istemci listesine ekle
+        }
+
+        synchronized (waitingClients) {
+            waitingClients.add(handler); // Eşleşme bekleyen listesine ekle
+        }
+
+        threadPool.execute(handler); // Handler'ı thread havuzuna ver
+
+    } catch (Exception e) {
+        System.err.println("Bağlantı işlenirken hata: " + e.getMessage());
         try {
-            System.out.println("Yeni istemci bağlandı: " + clientSocket.getInetAddress());
-            ClientHandler handler = new ClientHandler(clientSocket, allClients.size(), this); // Yeni handler oluştur
-
-            synchronized (allClients) {
-                allClients.add(handler); // Tüm istemci listesine ekle
-            }
-
-            synchronized (waitingClients) {
-                waitingClients.add(handler); // Eşleşme bekleyen listesine ekle
-            }
-
-            threadPool.execute(handler); // Handler'ı thread havuzuna ver
-
-        } catch (Exception e) {
-            System.err.println("Bağlantı işlenirken hata: " + e.getMessage());
-            try {
-                clientSocket.close(); // Hata durumunda bağlantıyı kapat
-            } catch (IOException closeError) {
-                System.err.println("Socket kapatılamadı: " + closeError.getMessage());
-            }
+            clientSocket.close(); // Hata durumunda bağlantıyı kapat
+        } catch (IOException closeError) {
+            System.err.println("Socket kapatılamadı: " + closeError.getMessage());
         }
     }
+}
 
     /**
      * Oyuncuyu bekleme listesine ekler

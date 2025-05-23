@@ -136,7 +136,7 @@ public class RiskClient extends JFrame { // Ana istemci sınıfının tanımlanm
     public static void main(String[] args) { // Ana metod - uygulamanın giriş noktası
         SwingUtilities.invokeLater(() -> { // EDT'de asenkron olarak çalıştırma
             String ip = "127.0.0.1"; // Varsayılan sunucu IP adresi (localhost)
-            String playerName = null; // Oyuncu adı değişkenini başlatma
+       String playerName = null; // Oyuncu adı değişkenini başlatma
             boolean isValidName = false; // Geçerli isim kontrolü için bayrak
 
             while (!isValidName) { // Geçerli bir isim girilene kadar döngü

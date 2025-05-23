@@ -62,23 +62,35 @@ public class MessageHandler { // Mesaj işleyici sınıfının tanımlanması
         }
     }
     
-    private void handleInit(Message message) { // Oyuncu başlatma işleme metodu
-        int playerId = Integer.parseInt(message.get("playerId")); // Mesajdan oyuncu ID'sini alma ve sayıya çevirme
-        gameState.setPlayerId(playerId); // Oyun durumuna oyuncu ID'sini kaydetme
-        
-        String name = message.get("name"); // Mesajdan oyuncu adını alma
-        if (name == null || name.isEmpty()) { // Oyuncu adı boş veya null ise
-            name = "Oyuncu " + playerId; // Varsayılan isim oluşturma
-        }
-
-        gameState.getPlayerNames().put(playerId, name); // Oyuncu adını haritaya kaydetme
-        gameUI.logToConsole("Oyuncu kimliğiniz: " + playerId + " (" + name + ")"); // Konsola oyuncu bilgisi yazma
-
-        Color c = gameState.getPlayerColor(playerId); // Oyuncu rengini alma
-        String colorName = gameState.getColorName(c); // Renk adını alma
-        gameUI.updatePlayerColor("Renginiz: " + colorName, c); // UI'da oyuncu rengini güncelleme
-        gameUI.updateStatus("Rakip oyuncu bekleniyor..."); // Durum mesajını güncelleme
+private void handleInit(Message message) { 
+    int playerId = Integer.parseInt(message.get("playerId")); // Mesajdan oyuncu ID'sini al ve sayıya çevir
+    gameState.setPlayerId(playerId); // Bu oyuncunun ID'sini oyun durumuna kaydet
+    
+    // Kendi rengini kaydet
+    String color = message.get("color"); // Mesajdan kendi renk bilgisini al
+    if (color != null) { // Eğer renk bilgisi boş değilse
+        gameState.setPlayerColor(playerId, color); // Kendi oyuncu ID'si ile rengi oyun durumuna kaydet
     }
+    
+    // Rakip rengini de kaydet
+    String opponentIdStr = message.get("opponentId"); // Mesajdan rakip oyuncu ID'sini string olarak al
+    String opponentColor = message.get("opponentColor"); // Mesajdan rakip renk bilgisini al
+    if (opponentIdStr != null && opponentColor != null) { // Eğer rakip bilgileri boş değilse
+        int opponentId = Integer.parseInt(opponentIdStr); // Rakip ID'sini string'den sayıya çevir
+        gameState.setPlayerColor(opponentId, opponentColor); // Rakip oyuncu ID'si ile rengini oyun durumuna kaydet
+    }
+    
+    String name = message.get("name"); // Mesajdan oyuncu adını al
+    if (name == null || name.isEmpty()) { // Eğer oyuncu adı boş veya null ise
+        name = "Oyuncu " + playerId; // Varsayılan bir isim oluştur
+    }
+    gameState.getPlayerNames().put(playerId, name); // Oyuncu ID'si ile adını oyun durumuna kaydet
+    gameUI.logToConsole("Oyuncu kimliğiniz: " + playerId + " (" + name + ")"); // Konsola oyuncu bilgilerini yazdır
+    Color c = gameState.getPlayerColor(playerId); // Bu oyuncunun rengini oyun durumundan al
+    String colorName = gameState.getColorName(c); // Renk nesnesini renk adına çevir
+    gameUI.updatePlayerColor("Renginiz: " + colorName, c); // UI'da oyuncu rengi bilgisini güncelle
+    gameUI.updateStatus("Rakip oyuncu bekleniyor..."); // UI'da durum mesajını güncelle
+}
     
     private void handleMap(Message message) { // Harita güncelleme işleme metodu
         gameState.updateMap(message.get("data")); // Oyun durumundaki haritayı güncelleme

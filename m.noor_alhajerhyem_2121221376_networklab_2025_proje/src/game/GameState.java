@@ -8,6 +8,7 @@ import java.util.List;
  * Oyunun mevcut durumunu tutan sınıf
  */ // Sınıfın açıklaması
 public class GameState { // Oyun durumu sınıfının tanımlanması
+    private int[] playerOrder = new int[2]; // Match'teki oyuncu sırası
     private int playerId = -1; // Mevcut oyuncunun ID'si, başlangıçta -1
     private int currentTurn = -1; // Şu anki sıranın sahibi oyuncu ID'si, başlangıçta -1
     private boolean gameOver = false; // Oyunun bitip bitmediğini gösteren bayrak
@@ -56,7 +57,8 @@ public class GameState { // Oyun durumu sınıfının tanımlanması
     public void setTargetTerritory(String targetTerritory) { this.targetTerritory = targetTerritory; } // Hedef bölgeyi ayarlayan setter metodu
     
     public List<String> getHighlightedTargets() { return highlightedTargets; } // Vurgulanan hedefleri döndüren getter metodu
-    
+    private Map<Integer, String> playerColors = new HashMap<>(); // Oyuncu renkleri
+
     public Map<String, Territory> getTerritories() { return territories; } // Bölgeler haritasını döndüren getter metodu
     public Map<Integer, String> getPlayerNames() { return playerNames; } // Oyuncu isimleri haritasını döndüren getter metodu
     public Map<Integer, Integer> getPlayerTroopsToPlace() { return playerTroopsToPlace; } // Yerleştirilecek askerler haritasını döndüren getter metodu
@@ -64,21 +66,23 @@ public class GameState { // Oyun durumu sınıfının tanımlanması
     public Map<String, Set<String>> getAdjacencyMap() { return adjacencyMap; } // Komşuluk haritasını döndüren getter metodu
     
     // Yardımcı metodlar
-    public Color getPlayerColor(int id) { // Oyuncu ID'sine göre renk döndüren metod
-        return (id % 2 == 0) // Oyuncu ID'si çift sayı mı kontrolü
-                ? new Color(220, 20, 60) // Çift ID için kırmızımsı renk döndürme
-                : new Color(30, 144, 255); // Tek ID için mavimsi renk döndürme
+  public Color getPlayerColor(int playerId) {
+    String colorName = playerColors.get(playerId);
+    if ("RED".equals(colorName)) {
+        return new Color(220, 20, 60); // Kırmızı
+    } else if ("BLUE".equals(colorName)) {
+        return new Color(30, 144, 255); // Mavi
+    } else {
+        return new Color(128, 128, 128); // Varsayılan gri
     }
+}
+  
     
-    public String getColorName(Color c) { // Renk nesnesine göre renk adını döndüren metod
-        if (c.equals(new Color(220, 20, 60))) { // Kırmızı renk kontrolü
-            return "Kırmızı"; // Kırmızı renk adını döndürme
-        }
-        if (c.equals(new Color(30, 144, 255))) { // Mavi renk kontrolü
-            return "Mavi"; // Mavi renk adını döndürme
-        }
-        return "Bilinmeyen"; // Tanımlanmamış renk için varsayılan değer
-    }
+public String getColorName(Color c) {
+    if (c.equals(new Color(220, 20, 60))) return "Kırmızı";
+    if (c.equals(new Color(30, 144, 255))) return "Mavi";
+    return "Bilinmeyen";
+}
     
     public boolean areNeighbors(String a, String b) { // İki bölgenin komşu olup olmadığını kontrol eden metod
         return adjacencyMap.getOrDefault(a, Collections.emptySet()).contains(b); // a bölgesinin komşuları arasında b'yi arama
@@ -134,4 +138,16 @@ public class GameState { // Oyun durumu sınıfının tanımlanması
     public int getRemainingTroops() { // Kalan asker sayısını döndüren metod
         return playerTroopsToPlace.getOrDefault(playerId, 0); // Oyuncunun yerleştirilecek asker sayısını döndürme, yoksa 0
     }
+    
+    public void setPlayerOrder(int[] order) {
+    this.playerOrder = order;
+}
+    
+    public int[] getPlayerOrder() {
+    return playerOrder;
+}
+    
+public void setPlayerColor(int playerId, String color) {
+    playerColors.put(playerId, color);
+}
 } 

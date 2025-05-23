@@ -225,17 +225,18 @@ private int getOwnedTerritoryCount(int playerId) { // Belirli bir oyuncunun sahi
     /**
      * Bölgeleri rastgele dağıtır
      */
-    private void distributeTerritories(int player1Id, int player2Id) { // Bölgeleri oyuncular arasında dağıtan metod
-        List<String> territoryNames = new ArrayList<>(territories.keySet()); // Tüm bölge isimlerini liste olarak alır
-        Collections.shuffle(territoryNames); // Bölge isimlerini rastgele karıştırır
+  private void distributeTerritories(int player1Id, int player2Id) {
+    List<String> territoryNames = new ArrayList<>(territories.keySet());
+    Collections.shuffle(territoryNames);
 
-        for (int i = 0; i < territoryNames.size(); i++) { // Her bölge için döngü başlatır
-            String territory = territoryNames.get(i); // Mevcut bölgenin ismini alır
-            int owner = (i % 2 == 0) ? player1Id : player2Id; // Sırayla oyunculara dağıtım yapar (çift indeks player1, tek indeks player2)
-            territories.get(territory).setOwner(owner); // Bölgenin sahibini ayarlar
-            territories.get(territory).setTroops(1); // Her bölgeye başlangıçta 1 asker yerleştirir
-        } // for döngüsünün sonu
-    } // distributeTerritories metodunun sonu
+    for (int i = 0; i < territoryNames.size(); i++) {
+        String territory = territoryNames.get(i);
+        // Her zaman: çift indeks → player1, tek indeks → player2
+        int owner = (i % 2 == 0) ? player1Id : player2Id;
+        territories.get(territory).setOwner(owner);
+        territories.get(territory).setTroops(1);
+    }
+}
 
     /**
      * Sırayı bir sonraki oyuncuya geçirir ve asker dağıtımını hesaplar
