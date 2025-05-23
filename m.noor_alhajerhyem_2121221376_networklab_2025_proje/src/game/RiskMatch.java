@@ -258,55 +258,60 @@ public void handlePlaceTroops(int playerId, String territory, int troops) {
     }
 
     
-public void handleRestartRequest(int playerId) { // Yeniden başlatma isteğini yöneten metot
-    if (game.checkWinner() == -1) { // Eğer oyun henüz bitmemişse
-        getPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
-            "msg", "Oyun henüz bitmedi, yeniden başlatılamaz." // Bilgi mesajı
+// RiskMatch.java içinde handleRestartRequest metodunu şu şekilde değiştirin:
+
+public void handleRestartRequest(int playerId) {
+    if (game.checkWinner() == -1) {
+        getPlayer(playerId).sendMessage(new Message("INFO", Map.of(
+            "msg", "Oyun henüz bitmedi, yeniden başlatılamaz."
         )));
-        return; // İşlemi sonlandır
+        return;
     }
 
-    if (restartRequests.contains(playerId)) { // Eğer oyuncu zaten istek göndermişse
-        return; // İşlemi sonlandır
+    if (restartRequests.contains(playerId)) {
+        return;
     }
 
-    restartRequests.add(playerId); // İsteği listeye ekle
-    getPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
-        "msg", "Yeniden başlatma isteğiniz alındı." // Bilgi mesajı
+    restartRequests.add(playerId);
+    getPlayer(playerId).sendMessage(new Message("INFO", Map.of(
+        "msg", "Yeniden başlatma isteğiniz alındı."
     )));
 
     // Eğer sadece 1 oyuncu kaldıysa → direkt başlat
-    if (checkActivePlayerCount() == 1) { // Aktif oyuncu sayısı 1 ise
+    if (checkActivePlayerCount() == 1) {
         ClientHandler waitingPlayer = getPlayer(playerId);
         
-        waitingPlayer.sendMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
-            "msg", "Yeni bir rakip bekleniyor..." // Bilgi mesajı
+        waitingPlayer.sendMessage(new Message("INFO", Map.of(
+            "msg", "Yeni bir rakip bekleniyor..."
         )));
         
-        // ✅ Oyuncuyu bekleme listesine eklerken RiskMatch referansı temizlenecek
-        server.addToWaiting(waitingPlayer); // Oyuncuyu bekleme listesine ekle
+        server.addToWaiting(waitingPlayer);
         
         System.out.println("Oyuncu " + playerId + " tek kaldı, bekleme listesine eklendi.");
-        return; // İşlemi sonlandır
+        return;
     }
 
     // Normal 2 oyuncu durumu
-    if (restartRequests.size() == 2) { // Eğer her iki oyuncu da istek göndermişse
-        broadcastMessage(new Message("INFO", Map.of( // Bilgi mesajı gönder
-            "msg", "Her iki oyuncu da yeniden başlatmayı onayladı. Oyun sıfırlanıyor..." // Bilgi mesajı
+    if (restartRequests.size() == 2) {
+        broadcastMessage(new Message("INFO", Map.of(
+            "msg", "Her iki oyuncu da yeniden başlatmayı onayladı. Oyun sıfırlanıyor..."
         )));
         
-        restartRequests.clear(); // İstek listesini temizle
+        restartRequests.clear();
         
-        // ✅ Oyunu yeniden başlatmadan önce referansları temizle
+        // ✅ RiskMatch durumunu tamamen sıfırla
         initialPlacementPhase = true;
         playersFinishedPlacement.clear();
+        currentPlayerIndex = 0;
+        currentPlayer = playerOrder[0];
         
-        game.initializeGame(player1, player2); // Oyunu yeniden başlat
-        sendMap(); // Harita durumunu gönder
-        sendAdjacency(); // Komşuluk haritasını gönder
-        currentPlayerIndex = 0; // İlk oyuncudan başla
-        currentPlayer = playerOrder[0]; // İlk oyuncuyu sıraya al
+        // ✅ OYUNU TAMAMEN YENİDEN BAŞLAT
+        game.initializeGame(player1, player2); // Bu artık sahiplikleri de sıfırlayacak
+        
+        // ✅ İstemcilere yeni durumu gönder
+        sendInit();        // Oyuncu kimliklerini yeniden gönder
+        sendAdjacency();   // Komşuluk haritasını gönder
+        sendMap();         // Yenilenen harita durumunu gönder
         
         // İlk oyuncunun başlangıç askerlerini hesapla
         int initialTroops = game.getTroopsToPlace(playerOrder[0]);
@@ -316,9 +321,11 @@ public void handleRestartRequest(int playerId) { // Yeniden başlatma isteğini 
             "name", getCurrentPlayer().getPlayerName()
         )));
         
-    } else { // Sadece bir oyuncu istek göndermişse
-        getOtherPlayer(playerId).sendMessage(new Message("INFO", Map.of( // Diğer oyuncuya bilgilendirme gönder
-            "msg", "Diğer oyuncudan yeniden başlatma isteği geldi." // Bilgi mesajı
+        System.out.println("✅ Oyun tamamen yeniden başlatıldı: Oda " + roomId);
+        
+    } else {
+        getOtherPlayer(playerId).sendMessage(new Message("INFO", Map.of(
+            "msg", "Diğer oyuncudan yeniden başlatma isteği geldi."
         )));
     }
 }
